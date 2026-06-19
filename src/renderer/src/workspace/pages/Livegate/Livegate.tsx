@@ -115,18 +115,18 @@ const LivegateNow = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const { bufferRef, addToBuffer, resetBuffer } = useStreamBuffer();
+  const { addToBuffer, resetBuffer } = useStreamBuffer();
 
   const [isLive, setIsLive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeClass, setActiveClass] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [currentPlatform, setCurrentPlatform] = useState('');
+  const [currentPlatform, _setCurrentPlatform] = useState('');
   const [streamKey, setStreamKey] = useState('');
   const [streamKeys, setStreamKeys] = useState<StreamKeys>({});
-  const [attachedAccountsData, setAttachedAccountsData] = useState([]);
+  
   const selectedInstance = localStorage.getItem("selectedInstanceId");
-  const [selectedInstanceAccounts, setSelectedInstanceAccounts] = useState([]);
+  const [selectedInstanceAccounts, setSelectedInstanceAccounts] = useState<string[]>([]);
 
   const [liveStatus, setLiveStatus] = useState<LiveStatus>({
     youtube: false,
@@ -187,13 +187,12 @@ const LivegateNow = () => {
 
   // Account and Stream Key Management
   useEffect(() => {
-    const handleAttachedAccounts = (event, accounts) => {
-      setAttachedAccountsData(accounts);
+    const handleAttachedAccounts = (_event: unknown, accounts: Record<string, string[]>[]) => {
       const instanceAccounts = accounts.find((account) => Object.keys(account)[0] === selectedInstance);
-      setSelectedInstanceAccounts(instanceAccounts?.[selectedInstance] || []);
+      setSelectedInstanceAccounts(instanceAccounts?.[selectedInstance ?? ''] || []);
     };
 
-    const handleStreamKeys = (event, keys) => {
+    const handleStreamKeys = (_event: unknown, keys: Record<string, StreamKeys>[]) => {
       if (keys.length === 0) {
         setStreamKeys({
           youtube: '',
@@ -204,7 +203,7 @@ const LivegateNow = () => {
         return;
       }
       const instanceKeys = keys.find((key) => Object.keys(key)[0] === selectedInstance);
-      setStreamKeys(instanceKeys?.[selectedInstance]);
+      setStreamKeys(instanceKeys?.[selectedInstance ?? ''] ?? {});
     };
 
     window.electron.ipcRenderer.send('show-attached-accounts');
@@ -225,7 +224,6 @@ const LivegateNow = () => {
   // Stream Status Management
   useEffect(() => {
     const handleStreamStatus = (status) => {
-      console.log('Stream status:', status);
 
       if (status.status === 'error') {
         toast({
@@ -288,7 +286,7 @@ const LivegateNow = () => {
 
           if (processedChunk) {
             Object.entries(liveStatus).forEach(([platform, isActive]) => {
-              if (isActive) {
+              if (isActive as boolean) {
                 window.electron.ipcRenderer.invoke('stream-data', {
                   data: Array.from(processedChunk),
                   platform,
@@ -318,12 +316,13 @@ const LivegateNow = () => {
       console.error('Stream recording error:', error);
       toast({
         title: 'Stream Recording Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive'
       });
       handleStopLive();
+      return undefined
     }
-  }, [isLive, liveStatus, addToBuffer, resetBuffer, health.dropped, updateHealth]);
+  }, [isLive, liveStatus, addToBuffer, resetBuffer, health.dropped, updateHealth])
 
   // RTMP URL Generation
   const getRtmpUrl = useCallback((platform: string, key: string) => {
@@ -379,7 +378,7 @@ const LivegateNow = () => {
       console.error('Error starting stream:', error);
       toast({
         title: 'Stream Start Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive'
       });
     } finally {
@@ -415,7 +414,7 @@ const LivegateNow = () => {
       console.error('Error stopping stream:', error);
       toast({
         title: 'Stream Stop Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive'
       });
     } finally {

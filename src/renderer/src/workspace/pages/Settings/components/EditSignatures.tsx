@@ -8,15 +8,11 @@ import { RootState } from '@renderer/redux/store';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPlatform } from '@renderer/redux/slices/currentSlice';
 import { SocialMediaPlatform } from '@renderer/types/social-media';
-import { addSignature } from '@renderer/redux/slices/SchedulerSlice';
 import { useToast } from '@renderer/hooks/use-toast';
-
-// Import platform icons
 import twitter from '@renderer/assets/twitter-icon.png';
 import facebook from '@renderer/assets/facebook-icon.png';
 import instagram from '@renderer/assets/instagram-icon.png';
 import tiktok from '@renderer/assets/tiktok-icon.png';
-import twitch from '@renderer/assets/twitch-icon.png';
 import OF from '@renderer/assets/of-icon.png';
 import youtube from '@renderer/assets/youtube-icon.png';
 
@@ -39,11 +35,6 @@ interface SignaturesData {
 
 interface Instance {
   [key: string]: SignaturesData;
-}
-
-interface CurrentScheduler {
-  Instance_id: string;
-  platform: string;
 }
 
 const EditSignatures = () => {
@@ -77,16 +68,15 @@ const EditSignatures = () => {
 
   const loadSignatures = async () => {
     try {
-      const instanceId = localStorage.getItem('selectedInstanceId');
-      const signaturesList = await window.electron.ipcRenderer.invoke('read-json-file', 'SIGNATURES');
+      const instanceId = localStorage.getItem('selectedInstanceId') ?? ''
+      const signaturesList = await window.electron.ipcRenderer.invoke('read-json-file', 'SIGNATURES')
 
-      // Find signatures for the selected instance
       const instanceSignatures = signaturesList.find(
         (item: Instance) => Object.keys(item)[0] === instanceId
-      );
+      )
 
       if (instanceSignatures) {
-        setSignatures(instanceSignatures[instanceId] || {});
+        setSignatures(instanceSignatures[instanceId] || {})
       } else {
         setSignatures({});
       }
@@ -151,8 +141,8 @@ const EditSignatures = () => {
 
     setIsLoading(true);
     try {
-      const instanceId = localStorage.getItem('selectedInstanceId');
-      const currentSignatures = await window.electron.ipcRenderer.invoke('read-json-file', 'SIGNATURES') || [];
+      const instanceId = localStorage.getItem('selectedInstanceId') ?? ''
+      const currentSignatures = await window.electron.ipcRenderer.invoke('read-json-file', 'SIGNATURES') || []
 
       let updatedSignatures = [...currentSignatures];
       const instanceIndex = updatedSignatures.findIndex(
@@ -170,13 +160,9 @@ const EditSignatures = () => {
           };
 
       if (instanceIndex !== -1) {
-        updatedSignatures[instanceIndex] = {
-          [instanceId]: newSignatureData
-        };
+        updatedSignatures[instanceIndex] = { [instanceId]: newSignatureData }
       } else {
-        updatedSignatures.push({
-          [instanceId]: newSignatureData
-        });
+        updatedSignatures.push({ [instanceId]: newSignatureData })
       }
 
       await window.electron.ipcRenderer.invoke('write-json-file', 'SIGNATURES', updatedSignatures);
@@ -207,7 +193,7 @@ const EditSignatures = () => {
           All Platforms
         </span>
       </SelectItem>
-      {Object.keys(SocialMediaPlatform).map((platform) => (
+      {(Object.keys(SocialMediaPlatform) as (keyof typeof SocialMediaPlatform)[]).map((platform) => (
         <SelectItem key={platform} value={SocialMediaPlatform[platform]}>
           <span className="flex items-center gap-2">
             <img

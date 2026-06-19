@@ -29,10 +29,10 @@ const PreviewMedia: React.FC<PreviewMediaProps> = ({
   urlsObj,
   onDelete,
   onUpload,
-  premiumImages,
+  premiumImages: _premiumImages,
   setPremiumImages,
   setUrlsObj,
-  isDragging
+  isDragging: _isDragging
 }) => {
   const scheduler = useSelector((state: RootState) => state.currentScheduler)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)

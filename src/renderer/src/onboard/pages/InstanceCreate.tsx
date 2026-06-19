@@ -27,7 +27,6 @@ export const InstanceCreate: React.FC = () =>
     const navigate = useNavigate()
     const usedAvatars = InstancesArray.map((instance) => instance.instanceAvatar)
     const availableAvatars = avatars.filter((avatar) => !usedAvatars.includes(avatar))
-    console.log(availableAvatars)
     const uniqueId = `${new Date()
       .toISOString()
       .replace(/[-:.TZ]/g, '')

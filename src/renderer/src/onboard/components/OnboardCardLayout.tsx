@@ -13,7 +13,7 @@ interface OnboardCardLayoutProps {
   disable?: boolean
   cancelBtn?: boolean
   btnText: string // Add btnText prop
-  onClick: () => boolean // Add onClick prop
+  onClick: () => boolean | void | Promise<boolean | void>
   children?: React.ReactNode
 }
 
@@ -31,11 +31,9 @@ const OnboardCardLayout: React.FC<OnboardCardLayoutProps> = ({
   const navigate=useNavigate();
 const dispatch = useDispatch()
 
-  const handleClick = (): void => {
-    const isValid = onClick() // Call the validation function in the child component
-
-    if (isValid) {
-      // Only set show to false if validation is successful
+  const handleClick = async (): Promise<void> => {
+    const result = await onClick()
+    if (result === true) {
       setShow(false)
     }
   }

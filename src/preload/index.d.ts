@@ -1,19 +1,21 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
-import { Scheduler } from 'timers/promises'
 
 declare global {
   interface Window {
-    electron: ElectronAPI & {
-      scheduler: {
-        set: (schedule) => Promise<void>
-        get: (instanceId) => Promise<Scheduler[]>
-        delete: (platform) => Promise<string>
-        deleteScheduler: (schedulerId) => Promise<string>
-      }
-    }
+    electron: ElectronAPI
     api: {
-      setScheduler: (schedule) => Promise<void>
-      getScheduler: (instanceId, platform) => Promise<Scheduler[]>
+      startStream: (id: string, streamKey: string) => void
+      sendStreamData: (id: string, data: ArrayBuffer) => void
+      stopStream: (id: string) => void
+      getBrowserExists: () => Promise<boolean>
+    }
+    electronAPI: {
+      checkForUpdates: () => void
+      onUpdateAvailable: (cb: (...args: unknown[]) => void) => void
+      onUpdateNotAvailable: (cb: (...args: unknown[]) => void) => void
+      onDownloadProgress: (cb: (...args: unknown[]) => void) => void
+      onUpdateDownloaded: (cb: (...args: unknown[]) => void) => void
+      onUpdateError: (cb: (...args: unknown[]) => void) => void
     }
   }
 }

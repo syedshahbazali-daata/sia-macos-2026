@@ -18,20 +18,10 @@ import twitter from '@renderer/assets/twitter-icon.png'
 import facebook from '@renderer/assets/facebook-icon.png'
 import instagram from '@renderer/assets/instagram-icon.png'
 import tiktok from '@renderer/assets/tiktok-icon.png'
-import twitch from '@renderer/assets/twitch-icon.png'
+// import twitch from '@renderer/assets/twitch-icon.png'
 import OF from '@renderer/assets/of-icon.png'
 import youtube from '@renderer/assets/youtube-icon.png'
 
-const platformIcons = {
-  'Twitter Post': twitter,
-  'Facebook': facebook,
-  'Instagram post': instagram,
-  'Instagram story': instagram,
-  'Tik Tok Post': tiktok,
-  'OF Mass Messaging': OF,
-  'OF Post': OF,
-  'YouTube Shorts': youtube
-};
 
 const CreatePost = (): JSX.Element => {
   const scheduler = useSelector((state: RootState) => state.currentScheduler);

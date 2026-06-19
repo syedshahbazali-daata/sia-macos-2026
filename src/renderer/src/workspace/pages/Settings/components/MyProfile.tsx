@@ -1,4 +1,3 @@
-import React from 'react';
 import { TabsContent } from "@renderer/components/ui/tabs";
 import { Clock, CreditCard, User } from 'lucide-react';
 import { Card, CardContent } from '@renderer/components/ui/card';

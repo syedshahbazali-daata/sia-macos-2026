@@ -70,8 +70,6 @@ const Dashboard: React.FC<DashboardProps> = () => {
   const license = storage.get(enums.LICENSE)?.expiry_date?.seconds
 
   useEffect(() => {
-    console.log('>>>>>>', storage.get(enums.LICENSE))
-    // Update chart data and metrics when the period changes
     setChartAndMetrics(generateRandomData())
   }, [selectedPeriod])
 

@@ -1,7 +1,5 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-nocheck
 import { useEffect, useState } from 'react';
-import { Eye, Calendar, Clock, Search, ChevronLeft, ChevronRight, ExternalLink, X } from 'lucide-react';
+import { Eye, Calendar, Clock, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card } from "@renderer/components/ui/card";
 import { Input } from "@renderer/components/ui/input";
 import {
@@ -15,7 +13,6 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
 } from "@renderer/components/ui/dialog";
 import { SocialMediaPlatform } from '@renderer/types/social-media';
 
@@ -251,13 +248,13 @@ const ViewScheduleModal = ({ scheduler, showModal, setShowModal }: ViewScheduleM
 
 // Main History Component
 const History = (): JSX.Element => {
-  const [data, setData] = useState<SchedulerData[]>([]);
-  const [filteredData, setFilteredData] = useState<SchedulerData[]>([]);
+  const [data, setData] = useState<SchedulerDetails[]>([]);
+  const [filteredData, setFilteredData] = useState<SchedulerDetails[]>([]);
   const [selectedPlatform, setSelectedPlatform] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const currentInstanceId = localStorage.getItem('selectedInstanceId');
   const [open, setOpen] = useState(false);
-  const [scheduler, setScheduler] = useState<SchedulerData | null>(null);
+  const [scheduler, setScheduler] = useState<SchedulerDetails | null>(null);
 
   useEffect(() => {
     const loadSchedules = async (): Promise<void> => {
@@ -309,14 +306,6 @@ const History = (): JSX.Element => {
       />
     </div>
   );
-
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
 
   return (
     <div className="flex flex-col w-full h-full bg-gray-50">

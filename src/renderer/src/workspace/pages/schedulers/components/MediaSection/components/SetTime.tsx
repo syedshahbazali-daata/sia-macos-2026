@@ -70,7 +70,6 @@ const SetTime = ({
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedDate = e.target.value;
-    console.log(selectedDate, "selectedDate")
     setDate(selectedDate);
   };
 

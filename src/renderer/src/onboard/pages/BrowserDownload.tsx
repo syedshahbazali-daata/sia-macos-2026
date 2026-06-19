@@ -14,7 +14,7 @@ const BrowserDownload: React.FC = () => {
   useEffect(() => {
     window.electron.ipcRenderer.send('browser-exists', '');
 
-    window.electron.ipcRenderer.once('browser-exists-response', (event, browserExists) => {
+    window.electron.ipcRenderer.once('browser-exists-response', (_event, browserExists) => {
       if (browserExists) {
         setLoading(false);
         navigateToNextScreen();

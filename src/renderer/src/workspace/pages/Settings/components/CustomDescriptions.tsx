@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { TabsContent } from "@renderer/components/ui/tabs";
 import { Card } from "@renderer/components/ui/card";
-import { Input } from "@renderer/components/ui/input";
 import { Button } from "@renderer/components/ui/button";
 import { Textarea } from "@renderer/components/ui/textarea";
 import { useToast } from "@renderer/hooks/use-toast";
@@ -19,16 +18,16 @@ const CustomDescriptions = () => {
   const [descriptions, setDescriptions] = useState('');
   const [splitBy, setSplitBy] = useState('\n'); // Default split by new line
   const [isLoading, setIsLoading] = useState(false);
-  const instanceId = localStorage.getItem('selectedInstanceId');
+  const instanceId = localStorage.getItem('selectedInstanceId') ?? ''
 
   const handleSplitChange = (value: string) => {
-    const splitMap = {
+    const splitMap: Record<string, string> = {
       'newline': '\n',
       'comma': ',',
       'semicolon': ';',
       'period': '.'
     };
-    setSplitBy(splitMap[value]);
+    setSplitBy(splitMap[value] ?? '\n')
   };
 
   const handleAddDescriptions = async () => {

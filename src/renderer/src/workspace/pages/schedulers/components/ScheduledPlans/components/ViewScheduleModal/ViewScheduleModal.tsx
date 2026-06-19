@@ -1,10 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { X, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const ViewScheduleModal = ({ scheduler, showModal, setShowModal }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
-  const modalRef = useRef(null)
+  const modalRef = useRef<HTMLDivElement>(null)
 
   // Handle outside click to close modal
   useEffect(() => {
@@ -14,11 +14,10 @@ const ViewScheduleModal = ({ scheduler, showModal, setShowModal }) => {
       }
     }
 
-    if (showModal) {
-      document.addEventListener('mousedown', handleOutsideClick)
-      return () => {
-        document.removeEventListener('mousedown', handleOutsideClick)
-      }
+    if (!showModal) return
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick)
     }
   }, [showModal, setShowModal])
 
@@ -38,7 +37,7 @@ const ViewScheduleModal = ({ scheduler, showModal, setShowModal }) => {
   // Delete confirmation handler
   const handleDelete = async () => {
     try {
-      const message = await window.electron.scheduler.deleteScheduler(scheduler.id)
+      const message = await window.electron.ipcRenderer.invoke('delete-scheduler', scheduler.id)
       if (message === 'success') {
         // Dispatch delete action or close modal
         setShowModal(false)

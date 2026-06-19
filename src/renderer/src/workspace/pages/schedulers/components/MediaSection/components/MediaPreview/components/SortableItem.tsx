@@ -30,9 +30,7 @@ const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
 }) => {
 
   const scheduler = useSelector((state: RootState) => state.currentScheduler)
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: urlsObj.filePath });
-  
-console.log(isDragging)
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: urlsObj.filePath })
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -40,7 +38,6 @@ console.log(isDragging)
     
   };
 
-  // console.log('setIsDragging:', setIsDragging); 
 
     return (
       <div
@@ -69,16 +66,10 @@ console.log(isDragging)
               </div>
               <button
               // onMouseEnter={() => {
-              //   console.log('mouse enter in delete');
               //   setIsDragging(true);
               // }}
-              onMouseEnter={()=>{
-                console.log('mouse enter')
-                console.log(isDragging)
-              }}
               onClick={(e) => {
-                console.log('delete clicked')
-                e.stopPropagation(); // Prevents the click event from reaching the parent div
+                e.stopPropagation()
                   onDelete(index);
                 }}
                 style={{cursor: !isDragging ? 'cursor' : 'cursor'}}

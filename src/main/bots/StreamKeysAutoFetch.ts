@@ -38,7 +38,7 @@ async function startTwitterBroadcast(page) {
     }
 }
 
-async function StreamKeysAutoFetch(platform: string, userDir: string, browserPath: string, userDirId: string) {
+async function StreamKeysAutoFetch(platform: string, userDir: string, browserPath: string, _userDirId: string) {
   console.log(platform, userDir, browserPath);
   process.env.HOME = userDir;
 
@@ -179,7 +179,7 @@ async function StreamKeysAutoFetch(platform: string, userDir: string, browserPat
       throw new Error(`Unsupported platform: ${platform}`);
     }
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error('Error:', error instanceof Error ? error.message : error)
   }
 
 

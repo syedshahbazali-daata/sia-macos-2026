@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SiALogo from '../components/SiALogo'
 import { storage, enums } from '@renderer/helpers/storageHelper'
@@ -6,7 +6,6 @@ import './animation.css'
 import { verifyLicense } from '@renderer/lib/license'
 import { useDispatch, useSelector } from 'react-redux'
 import type { RootState } from '@renderer/redux/store'
-import { addSchedulers } from '@renderer/redux/slices/SchedulerSlice'
 import { setInstanceId } from '@renderer/redux/slices/SelectedInstanceSlice'
 
 const SPLASH_DELAY_MS = 3000
@@ -39,7 +38,6 @@ const SplashScreen = (): JSX.Element => {
         return
       }
 
-      // @ts-expect-error window.api is injected by preload
       const browserExists = await window.api.getBrowserExists()
 
       if (!browserExists) {

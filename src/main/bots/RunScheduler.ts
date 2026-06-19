@@ -45,12 +45,9 @@ function moveSchedulerToHistory(schedulerId: string, jsonFilePath: string): void
   mainWindow?.webContents.send('scheduler-history-updated')
 }
 
-type SchedulerHandler = (
-  page: unknown,
-  schedules: Scheduler[],
-  filePath: string,
-  cb: typeof moveSchedulerToHistory,
-) => Promise<void>
+// Bots each define their own local Schedule + Page types — use any to bridge them all
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SchedulerHandler = (...args: any[]) => Promise<void>
 
 const PLATFORM_MAP: Record<string, SchedulerHandler> = {
   'twitter post': TwitterPostScheduler,

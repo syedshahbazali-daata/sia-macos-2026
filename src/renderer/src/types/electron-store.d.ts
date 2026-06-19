@@ -1,10 +1,3 @@
-// Declare the API exposed by the preload script
-interface ElectronAPI {
-  getStoreValue: (key: string, defaultValue?: any) => any;
-  setStoreValue: (key: string, value: any) => void;
-}
-
-// Extend the window interface to include electron API
-interface Window {
-  api: ElectronAPI;
-}
+// This file is intentionally empty — window.api is fully typed by the preload's
+// contextBridge declaration in src/preload/index.ts.
+// Do not add conflicting Window interface declarations here.

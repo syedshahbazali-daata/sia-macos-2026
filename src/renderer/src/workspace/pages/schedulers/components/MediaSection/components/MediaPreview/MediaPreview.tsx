@@ -1,6 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-nocheck
-
 import { useState } from 'react'
 import FileDropZone from './components/FileDropZone'
 import { Switch } from '@renderer/components/ui/switch'
@@ -12,7 +9,7 @@ const MediaPreview = ({
   previewMediaActive: boolean
   setPreviewMediaActive: (value: boolean) => void
 }): JSX.Element => {
-  const [mediaFilePaths, setMediaFilePaths] = useState<string[]>([])
+  const [_mediaFilePaths, setMediaFilePaths] = useState<string[]>([])
   const [clearMediaFiles, setClearMediaFiles] = useState(false)
   const [mediaExist, setMediaExist] = useState(false)
   const updateMediaFilePaths = (paths: string[]): void => {
@@ -22,9 +19,6 @@ const MediaPreview = ({
   const clearMediaFilesFunc = (): void => {
     setClearMediaFiles(true)
   }
-
-  console.log(mediaExist)
-  console.log(previewMediaActive)
 
   return (
     <div>

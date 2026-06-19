@@ -1,31 +1,22 @@
-// @ts-nocheck
-import {
-  faPlusCircle, faCalendarAlt, faClock, faTrash,
-  faFire
-
-} from '@fortawesome/free-solid-svg-icons'
-import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
-import {Button} from '@renderer/components/ui/button'
-import {RootState} from '@renderer/redux/store'
-import {LucideAlarmClockCheck} from 'lucide-react'
-import {clearSchedulersByPlatform} from '@renderer/redux/slices/SchedulerSlice'
-
-import {deleteScheduler} from '@renderer/redux/slices/SchedulerSlice'
-import {useDispatch, useSelector} from 'react-redux'
+import { faCalendarAlt, faClock, faTrash } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { Button } from '@renderer/components/ui/button'
+import { RootState } from '@renderer/redux/store'
+import { clearSchedulersByPlatform, deleteScheduler } from '@renderer/redux/slices/SchedulerSlice'
+import { useDispatch, useSelector } from 'react-redux'
 import DeleteConfirmationModal from '../MediaSection/components/MediaPreview/components/DeleteConfirmationModal'
-import React, {useEffect, useState} from 'react'
+import React, { useEffect, useState } from 'react'
 import ViewScheduleModal from './components/ViewScheduleModal/ViewScheduleModal'
-import {storage, enums} from "@renderer/helpers/storageHelper";
-import {Scheduler} from "@renderer/types/scheduler";
-import {c} from "vite/dist/node/types.d-aGj9QkWt";
+import { storage, enums } from '@renderer/helpers/storageHelper'
+import { Scheduler } from '@renderer/types/scheduler'
 
 // selectors.ts
 
 
-const getInstanceDetails = (instanceId: string) => {
-  const instances = storage.get(enums.INSTANCE, []);
-  const selectedInstance = localStorage.getItem("selectedInstanceId");
-  return instances.find((instance) => instance.instanceId === selectedInstance);
+const getInstanceDetails = () => {
+  const instances = storage.get(enums.INSTANCE, [])
+  const selectedInstance = localStorage.getItem('selectedInstanceId')
+  return instances.find((instance: { instanceId: string }) => instance.instanceId === selectedInstance)
 }
 
 
@@ -42,17 +33,14 @@ const ScheduledPlans = (): JSX.Element => {
   const [loading, setLoading] = useState(false)
 
 
-  const [attachedAccountsData, setAttachedAccountsData] = useState([]);
-  const selectedInstance = localStorage.getItem("selectedInstanceId");
-  const [selectedInstanceAccounts, setSelectedInstanceAccounts] = useState([]);
+  const selectedInstance = localStorage.getItem('selectedInstanceId') ?? ''
+  const [selectedInstanceAccounts, setSelectedInstanceAccounts] = useState<string[]>([])
 
   useEffect(() => {
     window.electron.ipcRenderer.send('show-attached-accounts')
-    window.electron.ipcRenderer.on('attached-accounts', (event, accounts) => {
-      setAttachedAccountsData(accounts);
-
-      const instanceAccounts = accounts.find((account) => Object.keys(account)[0] === selectedInstance);
-      setSelectedInstanceAccounts(instanceAccounts[selectedInstance]);
+    window.electron.ipcRenderer.on('attached-accounts', (_event, accounts) => {
+      const instanceAccounts = accounts.find((account: Record<string, string[]>) => Object.keys(account)[0] === selectedInstance)
+      setSelectedInstanceAccounts(instanceAccounts?.[selectedInstance] ?? [])
 
 
 
@@ -72,15 +60,10 @@ const ScheduledPlans = (): JSX.Element => {
 
 
 
-  console.log("current scheduler", currentScheduler.platform)
-  console.log("Instance accounts", selectedInstanceAccounts)
-
-
   const checkCurrentPlatformAccountAttached = () => {
     let isAttached = false;
     for (let i = 0; i < selectedInstanceAccounts.length; i++) {
       let currentPlatform = currentScheduler.platform.toLowerCase()
-      console.log("current platform", currentPlatform, "selected instance accounts", selectedInstanceAccounts[i])
       if (currentPlatform.includes('of')) {
         currentPlatform = 'of'
       } else if (currentPlatform.includes('tik')) {
@@ -109,7 +92,7 @@ const ScheduledPlans = (): JSX.Element => {
 
 
 
-  const handleRunScheduler = async (): void => {
+  const handleRunScheduler = async (): Promise<void> => {
     if (!isCurrentPlatformAccountAttached) {
       alert("Go to your instance settings and attach your Social Media account")
       return
@@ -117,34 +100,33 @@ const ScheduledPlans = (): JSX.Element => {
 
 
 
-    const instanceDetails = getInstanceDetails();
+    const instanceDetails = getInstanceDetails()
     setLoading(true)
-
-    const message = await window.electron.ipcRenderer.invoke('run-scheduler', currentScheduler.platform, platformSchedulers,
-      instanceDetails.userDir);
+    await window.electron.ipcRenderer.invoke(
+      'run-scheduler',
+      currentScheduler.platform,
+      platformSchedulers,
+      instanceDetails?.userDir
+    )
     setLoading(false)
-    console.log(message)
-
-
   }
 
-  const onConfirmDelete = async (): void => {
+  const onConfirmDelete = async (): Promise<void> => {
     //
-    const message = await window.electron.ipcRenderer.invoke('delete-scheduler', deleteId)
-
-    if (message === 'success') {
+    const result = await window.electron.ipcRenderer.invoke('delete-scheduler', deleteId)
+    if (result === 'success') {
       dispatch(deleteScheduler(deleteId))
     }
     setIsOpen(false)
   }
 
-  const clearAll = async (): void => {
+  const clearAll = async (): Promise<void> => {
     // delete-scheduler-by-platform
-    const message = await window.electron.ipcRenderer.invoke(
+    const result = await window.electron.ipcRenderer.invoke(
       'delete-scheduler-by-platform',
       currentScheduler.platform
     )
-    if (message === 'success') {
+    if (result === 'success') {
       dispatch(clearSchedulersByPlatform(currentScheduler.platform))
     }
     setIsClearAllOpen(false)
@@ -184,7 +166,7 @@ const ScheduledPlans = (): JSX.Element => {
         msOverflowStyle: 'none' /* IE and Edge */,
       }}>
         {platformSchedulers.length === 0 && <p>No scheduled plans available</p>}
-        {platformSchedulers?.map((scheduler: Scheduler, index: number) => (
+        {platformSchedulers?.map((scheduler: Scheduler) => (
           <React.Fragment key={scheduler.id}>
             <div
               className="cursor-pointer flex flex-col bg-white rounded-2xl shadow-md p-3 "

@@ -1,5 +1,6 @@
-import path from 'path';
-import {Page} from 'patchright';
+import { Page } from 'patchright'
+
+interface MediaPath { filePath: string; previewUrl: string; isPaid: boolean }
 
 interface Schedule {
   id: string;
@@ -13,7 +14,7 @@ interface Schedule {
   set_date: string;
   created_at: number;
   set_time: string;
-  media_path: string[];
+  media_path: MediaPath[];
   platform: string;
 }
 

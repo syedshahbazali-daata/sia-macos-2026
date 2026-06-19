@@ -4,6 +4,8 @@
 
 import { Page } from 'playwright';
 
+interface MediaPath { filePath: string; previewUrl: string; isPaid: boolean }
+
 interface Schedule {
   id: string;
   Instance_id: string;
@@ -16,7 +18,7 @@ interface Schedule {
   set_date: string; // Example: "Oct 10 2021"
   created_at: number;
   set_time: string; // Example: "12:00 AM"
-  media_path: string[];
+  media_path: MediaPath[];
   platform: string;
 }
 
@@ -36,7 +38,7 @@ async function YTVideoScheduler(
   page: Page,
   schedules: Schedule[],
   jsonFilePath: string,
-  moveToHistory: (schedule: Schedule, jsonFilePath: string) => void
+  moveToHistory: (schedulerId: string, jsonFilePath: string) => void
 ): Promise<void> {
   try {
     for (const schedule of schedules) {

@@ -22,7 +22,6 @@ const LicensePage: React.FC = () => {
 
   useEffect(() => {
     const checkBrowser = async (): Promise<void> => {
-      // @ts-expect-error window.api is injected by preload
       const exists = await window.api.getBrowserExists()
       setBrowserExist(exists)
     }

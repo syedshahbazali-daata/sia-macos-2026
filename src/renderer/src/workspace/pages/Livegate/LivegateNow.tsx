@@ -102,7 +102,7 @@ const LivegateNow = () => {
   const [currentInstanceId, setCurrentInstanceId] = useState<string>('');
   const [selectedPlatform, setSelectedPlatform] = useState('youtube');
   const [currentStreamKey, setCurrentStreamKey] = useState('');
-  const [isEditingKey, setIsEditingKey] = useState(false);
+  const [_isEditingKey, setIsEditingKey] = useState(false);
 
   // Device states
   const [cameras, setCameras] = useState<DeviceInfo[]>([]);
@@ -248,7 +248,7 @@ const LivegateNow = () => {
         setIsVideoLoading(false);
         toast({
           title: 'Setup Error',
-          description: error.message || 'Unable to access media devices',
+          description: error instanceof Error ? error.message : 'Unable to access media devices',
           variant: 'destructive'
         });
       }
@@ -497,7 +497,7 @@ const LivegateNow = () => {
           }));
           toast({
             title: `Stream Error - ${stream.id}`,
-            description: error.message,
+            description: error instanceof Error ? error.message : 'An unknown error occurred',
             variant: 'destructive'
           });
         }
@@ -512,7 +512,7 @@ const LivegateNow = () => {
       console.error('Stream start error:', error);
       toast({
         title: 'Stream Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
         variant: 'destructive'
       });
     } finally {
@@ -549,7 +549,7 @@ const LivegateNow = () => {
       console.error('Stream stop error:', error);
       toast({
         title: 'Stop Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
         variant: 'destructive'
       });
     }

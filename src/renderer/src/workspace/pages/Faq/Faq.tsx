@@ -14,8 +14,6 @@ interface FAQItem {
 const FAQ = (): JSX.Element => {
   const [searchQuery, setSearchQuery] = useState('');
   const [displayedItems, setDisplayedItems] = useState<FAQItem[]>(Questions.slice(0, 4));
-  const [openItemId, setOpenItemId] = useState<string | null>(null);
-
   useEffect(() => {
     const timer = setTimeout(() => {
       const filtered = Questions.filter(
@@ -28,10 +26,6 @@ const FAQ = (): JSX.Element => {
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
-
-  const handleAccordionChange = (itemId: string) => {
-    setOpenItemId(openItemId === itemId ? null : itemId);
-  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -130,11 +124,7 @@ const FAQ = (): JSX.Element => {
                     style={{ originY: 0 }}
                   >
                     <div className="mb-4">
-                      <ModernAccordion
-                        items={[item]}
-                        isOpen={openItemId === item.id}
-                        onToggle={() => handleAccordionChange(item.id)}
-                      />
+                      <ModernAccordion items={[item]} />
                     </div>
                   </motion.div>
                 ))}

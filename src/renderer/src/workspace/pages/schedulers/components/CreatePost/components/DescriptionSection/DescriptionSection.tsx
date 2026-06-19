@@ -34,7 +34,6 @@ import { SocialMediaPlatform } from '@renderer/types/social-media'
 
 const DescriptionSection = (): JSX.Element => {
   const scheduler = useSelector((state: RootState) => state.currentScheduler)
-  console.log(scheduler, 'scheduler')
   const dispatch = useDispatch()
   const [selectType, setSelectType] = useState<string>('description')  // Changed to have 'description' as default
   const [description, setDescription] = useState(scheduler.description_text || '')
@@ -137,7 +136,6 @@ const DescriptionSection = (): JSX.Element => {
 
 
 
-    console.log(newScheduler, '==> newScheduler')
 
     window.electron.ipcRenderer.send('add-scheduler', newScheduler)
 

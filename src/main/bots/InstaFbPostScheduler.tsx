@@ -3,6 +3,8 @@
 
 import {Page} from 'playwright';
 
+interface MediaPath { filePath: string; previewUrl: string; isPaid: boolean }
+
 interface Schedule {
   id: string;
   Instance_id: string;
@@ -15,7 +17,7 @@ interface Schedule {
   set_date: string;
   created_at: number;
   set_time: string;
-  media_path: string[];
+  media_path: MediaPath[];
   platform: string;
 }
 
@@ -23,7 +25,7 @@ async function InstaFbPostScheduler(
   page: Page,
   schedules: Schedule[],
   jsonFilePath: string,
-  moveToHistory: (schedule: Schedule, jsonFilePath: string) => void
+  moveToHistory: (schedulerId: string, jsonFilePath: string) => void
 ): Promise<void> {
   for (const schedule of schedules) {
     const {description_text: description, platform, set_date: date, set_time: time} = schedule;

@@ -16,7 +16,6 @@ import { RootState } from '@renderer/redux/store';
 const Interval = (): JSX.Element => {
   const currentScheduler = useSelector((state: RootState) => state.currentScheduler);
   const schedulers = useSelector(selectAllSchedulers);
-  const selectedInstance = localStorage.getItem("selectedInstanceId");
   const platformSchedulers = schedulers?.filter(
     (scheduler) => scheduler.platform === currentScheduler.platform
   );

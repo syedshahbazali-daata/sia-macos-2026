@@ -1,6 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-nocheck
-
 // components/FileDropZone.tsx
 import React, { useEffect, useState } from 'react'
 import { faPhotoFilm } from '@fortawesome/free-solid-svg-icons'
@@ -16,8 +13,7 @@ import {
   KeyboardSensor,
   PointerSensor,
   useSensor,
-  useSensors,
-  TouchSensor
+  useSensors
 } from '@dnd-kit/core'
 import {
   arrayMove,
@@ -253,7 +249,6 @@ const FileDropZone = ({
   const handleDragEnd = (event: any) => {
     // if(!isDragging)
     // {
-      console.log('drag & drop');
       const { active, over } = event;
       if (active.id !== over.id) {
         setUrlsObj((prevUrlsObj) => {

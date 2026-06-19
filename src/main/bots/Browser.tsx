@@ -1,8 +1,7 @@
-import { chromium } from 'patchright';
+import { chromium, type BrowserContext } from 'patchright'
 
-async function runBrowser(userDir: string, browserPath: string) {
-  console.log('Opening browser:', browserPath, userDir);
-  let browser = null;
+async function runBrowser(userDir: string, _browserPath: string) {
+  let browser: BrowserContext | null = null
 
   try {
     process.env.HOME = userDir;

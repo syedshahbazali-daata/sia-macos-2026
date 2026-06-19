@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TabsContent } from "@renderer/components/ui/tabs";
 import { Card } from "@renderer/components/ui/card";
 import { Input } from "@renderer/components/ui/input";
@@ -24,16 +24,15 @@ const AllDescriptions = () => {
 
   const loadDescriptions = async () => {
     try {
-      const instanceId = localStorage.getItem('selectedInstanceId');
-      const DESCRIPTIONLIST = await window.electron.ipcRenderer.invoke('read-json-file', 'CUSTOM_DESCRIPTIONS');
+      const instanceId = localStorage.getItem('selectedInstanceId') ?? ''
+      const DESCRIPTIONLIST = await window.electron.ipcRenderer.invoke('read-json-file', 'CUSTOM_DESCRIPTIONS')
 
-      // Get descriptions for the selected instance
       const instanceDescriptions = DESCRIPTIONLIST.find(
-        (item: any) => Object.keys(item)[0] === instanceId
-      );
+        (item: Record<string, unknown>) => Object.keys(item)[0] === instanceId
+      )
 
       if (instanceDescriptions) {
-        setDescriptions(instanceDescriptions[instanceId] || []);
+        setDescriptions((instanceDescriptions[instanceId] as string[]) || [])
       } else {
         setDescriptions([]);
       }
@@ -65,9 +64,9 @@ const AllDescriptions = () => {
     });
   };
 
-  const handleSearch = (e) => {
-    setSearchQuery(e.target.value);
-  };
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value)
+  }
 
   const filteredDescriptions = descriptions.filter(desc =>
     desc.toLowerCase().includes(searchQuery.toLowerCase())

@@ -122,7 +122,7 @@ function cleanupStream(id: string): void {
 
   if (!stream.process.killed) {
     try {
-      stream.process.stdin.end()
+      stream.process.stdin?.end()
       setTimeout(() => {
         if (!stream.process.killed) stream.process.kill('SIGTERM')
       }, 1000)
@@ -135,7 +135,7 @@ function cleanupStream(id: string): void {
 
 export function cleanupAllStreams(): void {
   activeStreams.forEach(({ process: proc }) => {
-    proc.stdin.end()
+    proc.stdin?.end()
     proc.kill()
   })
   activeStreams.clear()

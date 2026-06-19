@@ -44,7 +44,6 @@ const currentSchedulerSlice = createSlice({
   initialState,
   reducers: {
     setSchedulerId: (state, action: PayloadAction<string>) => {
-      console.log('action.payload', action.payload)
       state.id = action.payload
     },
     setInstanceId: (state, action: PayloadAction<string>) => {

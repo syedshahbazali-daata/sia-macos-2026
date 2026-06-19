@@ -1,6 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-nocheck
-
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 
 export interface MediaPath {
@@ -32,12 +29,11 @@ const SchedulerSlice = createSlice({
   name: 'scheduler',
   initialState,
   reducers: {
-    addSchedulers: (state, action: PayloadAction<Scheduler[]>) => {
+    addSchedulers: (_state, action: PayloadAction<Scheduler[]>) => {
       return action.payload
     },
 
     addScheduler: (state, action: PayloadAction<Scheduler>) => {
-      console.log('I AM HERE')
       state.push(action.payload)
     },
     updateScheduler: (state, action: PayloadAction<Scheduler>) => {
@@ -61,20 +57,12 @@ const SchedulerSlice = createSlice({
       state,
       action: PayloadAction<{ Instance_id: string; signature: string; platform: string }>
     ) {
-      const { Instance_id, signature, platform } = action.payload;
-      console.log(`Updating signature for Instance_id: ${Instance_id}, platform: ${platform}, with signature: ${signature}`);
-
-      // Find the scheduler with the matching Instance_id and platform
+      const { Instance_id, signature, platform } = action.payload
       const scheduler = state.find(
-        (scheduler) => scheduler.Instance_id === Instance_id && scheduler.platform === platform
-      );
-      console.log(scheduler)
-
+        (s) => s.Instance_id === Instance_id && s.platform === platform
+      )
       if (scheduler) {
-        scheduler.signature = signature;  // Update the signature if both Instance_id and platform match
-        console.log("Updated scheduler:", scheduler);
-      } else {
-        console.log("Scheduler not found for Instance_id and platform:", { Instance_id, platform });
+        scheduler.signature = signature
       }
     }
   }

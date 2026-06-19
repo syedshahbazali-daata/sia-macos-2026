@@ -8,13 +8,11 @@ const LiveChat = () => {
 
   useEffect(() => {
     if (!liveChatWorking) {
-      const timer = setTimeout(() => {
-        setShowComponent(false);
-      }, 3000);
-
-      return () => clearTimeout(timer);
+      const timer = setTimeout(() => setShowComponent(false), 3000)
+      return () => clearTimeout(timer)
     }
-  }, [liveChatWorking]);
+    return undefined
+  }, [liveChatWorking])
 
   if (!showComponent) return null;
 

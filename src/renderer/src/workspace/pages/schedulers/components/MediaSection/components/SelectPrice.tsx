@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { RootState } from '@renderer/redux/store'
 import { setPrice } from '@renderer/redux/slices/currentSlice'
 import { useDispatch, useSelector } from 'react-redux'
-import { SocialMediaPlatform } from '@renderer/types/social-media'
 
 const SelectPrice = (): JSX.Element => {
   const scheduler = useSelector((state: RootState) => state.currentScheduler)
@@ -12,7 +11,6 @@ const SelectPrice = (): JSX.Element => {
   const [priceSelect, setPriceSelect] = useState(false) // Switch state
   const [inputPrice, setInputPrice] = useState(0) // Price, default is 0
 
-  console.log(SocialMediaPlatform.OFPost, "whats this")
 
   // When platform changes, reset switch and price
   useEffect(() => {

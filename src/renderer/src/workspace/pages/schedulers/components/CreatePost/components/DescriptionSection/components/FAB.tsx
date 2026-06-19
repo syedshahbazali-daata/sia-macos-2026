@@ -1,4 +1,4 @@
-import {Grid2x2Plus, LucideSquareDashedMousePointer, PenTool, SmilePlus} from 'lucide-react'
+import {Grid2x2Plus, PenTool, SmilePlus} from 'lucide-react'
 import {useEffect, useState} from 'react'
 import SignatureList from './Signature'
 import {RootState} from '@renderer/redux/store'

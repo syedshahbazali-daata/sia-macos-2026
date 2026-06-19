@@ -79,7 +79,7 @@ export function Header({ activeItem }: { activeItem: string }): JSX.Element {
           )}
         </div>
         <img
-          src={selectedInstance.instanceAvatar}
+          src={selectedInstance?.instanceAvatar}
           alt="avatar"
           className="ml-5 w-12 h-12 rounded-full border border-black md:block hidden"
         />

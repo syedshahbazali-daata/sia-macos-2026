@@ -1,4 +1,6 @@
 import {Page} from 'patchright';
+interface MediaPath { filePath: string; previewUrl: string; isPaid: boolean }
+
 interface Schedule {
   id: string;
   Instance_id: string;
@@ -11,7 +13,7 @@ interface Schedule {
   set_date: string;
   created_at: number;
   set_time: string;
-  media_path: string[];
+  media_path: MediaPath[];
   platform: string;
 }
 
@@ -20,7 +22,7 @@ async function InstaStoryScheduler(
   page: Page,
   schedules: Schedule[],
   jsonFilePath: string,
-  moveToHistory: (schedule: Schedule, jsonFilePath: string) => void
+  moveToHistory: (schedulerId: string, jsonFilePath: string) => void
 ): Promise<void> {
   for (const schedule of schedules) {
     try {
@@ -49,7 +51,7 @@ async function InstaStoryScheduler(
 
       // Upload media files
       for (const mediaFile of media_path) {
-        const fileExtension = '.' + mediaFile.split('.').pop().toLowerCase();
+        const fileExtension = '.' + (mediaFile.split('.').pop() ?? '').toLowerCase()
         const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp'];
         const fileChooserSelector = imageExtensions.includes(fileExtension)
           ? "xpath=//div[contains(text(), 'Add') and contains(text(), 'photo')]"
@@ -80,9 +82,10 @@ async function InstaStoryScheduler(
       await page.waitForTimeout(1000)
 
       // MANAGING TIME converting 18:17 to 6:17 PM
-      const [hours, minutes] = schedule.set_time.split(':')
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      const formattedHours = hours % 12 || 12;
+      const [hoursStr, minutes] = schedule.set_time.split(':')
+      const hours = parseInt(hoursStr, 10)
+      const ampm = hours >= 12 ? 'PM' : 'AM'
+      const formattedHours = hours % 12 || 12
 
       console.log(`Scheduling story for ${schedule.id} on ${formattedDate} at ${formattedHours}:${minutes} ${ampm}`);
 

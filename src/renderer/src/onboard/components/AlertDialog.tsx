@@ -44,7 +44,6 @@ const AlertDialog = ({ deleteId, setOpenModal, onDeleteSuccess }: AlertDialogPro
             className="bg-red-500 text-white py-2 px-4 rounded"
             onClick={() => {
               dispatch(deleteInstance(deleteId)) // Dispatch delete action
-              console.log('Instance deleted', deleteId)
 
               window.electron.ipcRenderer.send('delete-instance', deleteId) // Send delete request to main process
 

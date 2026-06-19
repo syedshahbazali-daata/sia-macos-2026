@@ -2,41 +2,48 @@ import { setSignature } from '@renderer/redux/slices/currentSlice'
 import { LucideXCircle } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@renderer/redux/store'
-import {useEffect, useState} from "react";
+import { useEffect, useState } from 'react'
+
+interface SignatureEntry {
+  name: string
+  signature: string
+}
 
 const SignatureList = ({ onClose }: { onClose: () => void }): JSX.Element => {
   const dispatch = useDispatch()
-  const scheduler = useSelector((state: RootState) => state.currentScheduler);
-  const [signatures, setSignatures] = useState([]);
-  const currentInstanceId = scheduler.Instance_id
+  const scheduler = useSelector((state: RootState) => state.currentScheduler)
+  const [signatures, setSignatures] = useState<SignatureEntry[]>([])
 
   useEffect(() => {
     const fetchSignatures = async () => {
-      const instanceId = localStorage.getItem('selectedInstanceId');
-      const currentSignatures = await window.electron.ipcRenderer.invoke('read-json-file', 'SIGNATURES') || [];
+      const instanceId = localStorage.getItem('selectedInstanceId') ?? ''
+      const currentSignatures = await window.electron.ipcRenderer.invoke('read-json-file', 'SIGNATURES') || []
 
-      let updatedSignatures = [...currentSignatures];
+      const updatedSignatures: Record<string, Record<string, string[]>>[] = [...currentSignatures]
       const instanceIndex = updatedSignatures.findIndex(
-        (item: Instance) => Object.keys(item)[0] === instanceId
-      );
+        (item) => Object.keys(item)[0] === instanceId
+      )
 
       if (instanceIndex !== -1) {
-        const platformSignatures = updatedSignatures[instanceIndex][instanceId][scheduler.platform];
-        let signatures_renew = []
+        const platformSignatures = updatedSignatures[instanceIndex][instanceId]?.[scheduler.platform]
+        const signatures_renew: SignatureEntry[] = []
         for (const sign in platformSignatures) {
           if (platformSignatures[sign] !== '') {
-            signatures_renew.push({name: "Signature " + (signatures_renew.length + 1), signature: platformSignatures[sign]})
+            signatures_renew.push({
+              name: 'Signature ' + (signatures_renew.length + 1),
+              signature: platformSignatures[sign]
+            })
           }
         }
         if (signatures_renew.length > 0) {
-          signatures_renew.push({name: "None", signature: ""})
+          signatures_renew.push({ name: 'None', signature: '' })
         }
-        setSignatures(signatures_renew);
+        setSignatures(signatures_renew)
       }
-    };
+    }
 
-    fetchSignatures();
-  }, []);
+    fetchSignatures()
+  }, [scheduler.platform])
 
   return (
     <div className="absolute bottom-2 right-0 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden">
@@ -72,7 +79,7 @@ const SignatureList = ({ onClose }: { onClose: () => void }): JSX.Element => {
                 </span>
               )}
             </div>
-            <div className="absolute inset-0 bg-blue-500 opacity-0 group-hover:opacity-5 transition-opacity duration-200"/>
+            <div className="absolute inset-0 bg-blue-500 opacity-0 group-hover:opacity-5 transition-opacity duration-200" />
           </div>
         ))}
       </div>
