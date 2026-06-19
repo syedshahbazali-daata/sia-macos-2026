@@ -14,16 +14,26 @@ export function writeSchedulers(schedulers: Scheduler[]): void {
   writeFileSync(PATHS.JSON_FILE, JSON.stringify(schedulers, null, 2), 'utf-8')
 }
 
-export function readJsonFile(fileName: keyof typeof PATHS): unknown {
-  const filePath = PATHS[fileName] as string
+const ALLOWED_FILE_KEYS = new Set(Object.keys(PATHS).filter((k) => (PATHS as Record<string, unknown>)[k] !== null && typeof (PATHS as Record<string, unknown>)[k] === 'string'))
+
+export function readJsonFile(fileName: string): unknown {
+  // Guard: only allow access to predefined safe paths, never arbitrary file access
+  if (!ALLOWED_FILE_KEYS.has(fileName)) {
+    throw new Error(`readJsonFile: unknown key "${fileName}"`)
+  }
+  const filePath = (PATHS as Record<string, string>)[fileName]
   if (!existsSync(filePath)) {
     writeFileSync(filePath, '[]', 'utf-8')
   }
   return JSON.parse(readFileSync(filePath, 'utf-8'))
 }
 
-export function writeJsonFile(fileName: keyof typeof PATHS, data: unknown): unknown {
-  const filePath = PATHS[fileName] as string
+export function writeJsonFile(fileName: string, data: unknown): unknown {
+  // Guard: only allow writing to predefined safe paths
+  if (!ALLOWED_FILE_KEYS.has(fileName)) {
+    throw new Error(`writeJsonFile: unknown key "${fileName}"`)
+  }
+  const filePath = (PATHS as Record<string, string>)[fileName]
   writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8')
   return JSON.parse(readFileSync(filePath, 'utf-8'))
 }
