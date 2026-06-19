@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+out/
+
+# Electron userdata (runtime data, not source)
+userdir-*/
+chromium/
+*.zip
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.iml
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment secrets
+.env
+.env.local
+.env.*.local
+
+# Test artifacts
+newTests/
+tests-examples/
+
+# Generated CSS (built by tailwind:build)
+src/renderer/src/tailwind-output.css
+
+# Temporary files
+*.tmp
+*.temp
