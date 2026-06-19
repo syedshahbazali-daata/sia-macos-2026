@@ -1,10 +1,10 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck
 import { useDispatch, useSelector } from 'react-redux'
-import CreatePost from './schedulers/components/CreatePost/CreatePost'
+import CreatePost from './components/CreatePost/CreatePost'
 import ScheduledPlans, {
   selectAllSchedulers
-} from './schedulers/components/ScheduledPlans/ScheduledPlans'
+} from './components/ScheduledPlans/ScheduledPlans'
 import { RootState } from '@renderer/redux/store'
 import { addSchedulers } from '@renderer/redux/slices/SchedulerSlice'
 import { useEffect } from 'react'
