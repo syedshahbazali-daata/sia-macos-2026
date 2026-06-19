@@ -6,119 +6,91 @@ import { toast } from '@renderer/hooks/use-toast'
 import { getLicensesByNumber, verifyLicense } from '@renderer/lib/license'
 import { storage, enums } from '@renderer/helpers/storageHelper'
 import { useSelector } from 'react-redux'
-import { RootState } from '@renderer/redux/store'
+import type { RootState } from '@renderer/redux/store'
+
+const MAX_ATTEMPTS = 5
 
 const LicensePage: React.FC = () => {
   const [browserExist, setBrowserExist] = useState<boolean>(false)
-  const [counter, setCounter] = useState<number>(0)
-  const instances = useSelector((state: RootState) => state.instance.instances);
-  const selectedId = useSelector((state: RootState) => state.selectedInstance.instanceId)
-
-
-
-
-  useEffect(() => {
-    const checkBrowserExists = async (): Promise<void> => {
-      // Call the API exposed in the preload script
-      // @ts-expect-error window object
-      const exists = await window.api.getBrowserExists()
-      console.log('Browser exists:', exists)
-      setBrowserExist(exists)
-    }
-
-    checkBrowserExists()
-  }, [])
+  const [attempts, setAttempts] = useState<number>(0)
   const [otpValue, setOtpValue] = useState<string>('')
+  const [isLoading, setIsLoading] = useState<boolean>(false)
   const navigate = useNavigate()
 
-  const handleLicenseCheck = async (): Promise<boolean> => {
-    setCounter((prevCounter) => prevCounter + 1)
+  const instances = useSelector((state: RootState) => state.instance.instances)
+  const selectedId = useSelector((state: RootState) => state.selectedInstance.instanceId)
 
-    if (otpValue.trim() === '') {
-      toast({
-        title: 'Field Required',
-        description: 'License code cannot be empty',
-        variant: 'destructive'
-      })
-      return false
+  useEffect(() => {
+    const checkBrowser = async (): Promise<void> => {
+      // @ts-expect-error window.api is injected by preload
+      const exists = await window.api.getBrowserExists()
+      setBrowserExist(exists)
     }
+    checkBrowser()
+  }, [])
+
+  const handleLicenseCheck = async (): Promise<void> => {
+    if (attempts >= MAX_ATTEMPTS) {
+      toast({
+        title: 'Too many attempts',
+        description: 'Please restart the app and try again.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     if (otpValue.trim().length !== 6) {
       toast({
         title: 'Invalid License Code',
         description: 'License code must be 6 digits',
-        variant: 'destructive'
+        variant: 'destructive',
       })
-      return false
+      return
     }
+
+    setAttempts((prev) => prev + 1)
+    setIsLoading(true)
 
     try {
       const license = await getLicensesByNumber(otpValue)
 
-      if (license) {
-        const verify = await verifyLicense(license.license)
-        if (verify) {
-          storage.set(enums.LICENSE, license)
-          if (!browserExist) {
-            navigate('/browser/download')
-          } else {
-            if (selectedId){
-              navigate(`/dashboard`)
-             }else if(instances.length===0){
-             navigate('/instance/create')
-             }else{
-               navigate('/instance')
-             }
-            }
-            return true;
-        } else {
-          toast({
-            title: 'Invalid License Code',
-            description: 'License code does not exist',
-            variant: 'destructive'
-          })
-          return false
-        }
-      } else {
+      if (!license || !(await verifyLicense(otpValue))) {
         toast({
           title: 'Invalid License Code',
-          description: 'License code does not exist',
-          variant: 'destructive'
+          description: 'License code does not exist or has expired.',
+          variant: 'destructive',
         })
-        return false
+        return
       }
-    } catch (error) {
+
+      storage.set(enums.LICENSE, license)
+
+      if (!browserExist) {
+        navigate('/browser/download')
+      } else if (selectedId) {
+        navigate('/dashboard')
+      } else if (instances.length === 0) {
+        navigate('/instance/create')
+      } else {
+        navigate('/instance')
+      }
+    } catch {
       toast({
         title: 'Error',
         description: 'Something went wrong. Please try again later.',
-        variant: 'destructive'
+        variant: 'destructive',
       })
-      return false
+    } finally {
+      setIsLoading(false)
     }
-  }
-
-  const handleClick = (): boolean => {
-    if (counter < 4) {
-      handleLicenseCheck().then((result) => {
-        console.log('License valid:', result)
-      })
-    } else {
-      toast({
-        title: 'Too many attempts',
-        description: 'Please try again later.',
-        variant: 'destructive'
-      })
-    }
-
-    // Return false to comply with the expected synchronous return type
-    return false
   }
 
   return (
     <OnboardCardLayout
       heading="License Code"
-      paragraph="Enter the license code you received when you purchased the SiA"
-      btnText="Submit"
-      onClick={handleClick}
+      paragraph="Enter the license code you received when you purchased SiA"
+      btnText={isLoading ? 'Checking...' : 'Submit'}
+      onClick={handleLicenseCheck}
     >
       <InputOtp value={otpValue} onChangeOtp={setOtpValue} />
     </OnboardCardLayout>

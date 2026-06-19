@@ -1,50 +1,29 @@
 import { db } from '@renderer/firebase-config'
-import { License } from '@renderer/types/license'
-import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore'
+import type { License } from '@renderer/types/license'
+import { collection, getDocs, query, where } from 'firebase/firestore'
 
-const TEST_LICENSE_CODE = '123456'
+const LICENSE_CODE_REGEX = /^\d{6}$/
 
-const TEST_LICENSE: License = {
-  id: 'test',
-  username: 'Test User',
-  email: 'test@sia.app',
-  license: TEST_LICENSE_CODE,
-  expiry_date: Timestamp.fromDate(new Date('2099-12-31'))
-}
-
-export const getLicensesByNumber = async (licenseNumber: string): Promise<License> => {
-  if (licenseNumber === TEST_LICENSE_CODE) return TEST_LICENSE
+export async function getLicensesByNumber(licenseNumber: string): Promise<License | null> {
+  if (!LICENSE_CODE_REGEX.test(licenseNumber)) {
+    throw new Error('Invalid license code format')
+  }
 
   const licenseCollection = collection(db, 'license')
-
   const q = query(licenseCollection, where('license', '==', licenseNumber))
+  const querySnapshot = await getDocs(q)
 
-  try {
-    const querySnapshot = await getDocs(q)
-    const licenses = querySnapshot.docs.map((doc) => ({
-      id: doc.id!,
-      ...doc.data()!
-    }))
-    console.log('Licenses: ', licenses)
-    // @ts-expect-error the type checked should be followed here.
-    return licenses[0]
-  } catch (error) {
-    console.error('Error fetching licenses: ', error)
-    throw error
-  }
+  if (querySnapshot.empty) return null
+
+  const doc = querySnapshot.docs[0]
+  return { id: doc.id, ...doc.data() } as License
 }
 
-export const verifyLicense = async (licenseNumber: string): Promise<boolean> => {
-  if (licenseNumber === TEST_LICENSE_CODE) return true
+export async function verifyLicense(licenseNumber: string): Promise<boolean> {
+  if (!LICENSE_CODE_REGEX.test(licenseNumber)) return false
 
   const license = await getLicensesByNumber(licenseNumber)
-  if (license) {
-    const currentDate = new Date()
-    if (license.expiry_date.toDate() < currentDate) {
-      return false
-    }
+  if (!license) return false
 
-    return true
-  }
-  return false
+  return license.expiry_date.toDate() >= new Date()
 }
