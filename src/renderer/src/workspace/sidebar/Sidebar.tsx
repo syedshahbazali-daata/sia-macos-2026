@@ -109,7 +109,7 @@ const Sidebar = ({ activeItem }: SideBarProps): JSX.Element => {
             <div className="font-poppins">FAQ</div>
           </button>
         </div>
-        <div className="flex flex-col items-center h-[20%] w-[75%] justify-end mb-8">
+        <div className="flex flex-col items-center h-[20%] w-[75%] justify-end mb-8 gap-2">
           <Button variant="link" className="text-white">
             <FontAwesomeIcon icon={faLock}/>
             <span
@@ -119,6 +119,7 @@ const Sidebar = ({ activeItem }: SideBarProps): JSX.Element => {
               Logout
             </span>
           </Button>
+          <span className="text-gray-500 text-[11px] font-poppins">v{__APP_VERSION__}</span>
         </div>
       </div>
     </div>
