@@ -15,7 +15,6 @@ asarUnpack:
   - resources/**
   - node_modules/ffmpeg-static/**/*
 
-afterSign: scripts/notarize.cjs
 win:
   executableName: sia
 nsis:
@@ -33,7 +32,8 @@ mac:
     - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-  notarize: true
+  notarize:
+    teamId: "53S3724B9B"
   icon: build/icon.icns
 
 
