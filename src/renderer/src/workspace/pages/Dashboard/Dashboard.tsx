@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Card } from '@renderer/components/ui/card'
 import { Info } from 'lucide-react'
 import Metrics from './components/Metrics'
-import ShiftCard from './components/ShiftCard'
+import ShiftCard, { PlatformStat } from './components/ShiftCard'
 import DashboardChart from './components/DashboardChart'
 import { storage, enums } from '@renderer/helpers/storageHelper'
 
@@ -122,6 +122,17 @@ function computeMetrics(schedules: SchedulerRecord[]): MetricsData {
   }
 }
 
+function buildPlatformStats(schedules: SchedulerRecord[]): PlatformStat[] {
+  const counts: Record<string, number> = {}
+  schedules.forEach((s) => {
+    const key = (s.platform || '').toLowerCase()
+    counts[key] = (counts[key] || 0) + 1
+  })
+  return Object.entries(counts)
+    .map(([key, count]) => ({ key, displayName: PLATFORM_DISPLAY[key] ?? key, count }))
+    .sort((a, b) => b.count - a.count)
+}
+
 function convertEpochToDaysHours(epochTimestamp: number): { days: number } {
   const days = Math.floor((Date.now() - epochTimestamp * 1000) / (1000 * 60 * 60 * 24))
   return { days }
@@ -158,6 +169,7 @@ const Dashboard: React.FC = () => {
 
   const metrics = computeMetrics(schedules)
   const chartData = buildChartData(schedules, selectedPeriod)
+  const platformStats = buildPlatformStats(schedules)
 
   return (
     <>
@@ -204,7 +216,7 @@ const Dashboard: React.FC = () => {
 
           {/* Bottom Grid */}
           <div className="grid grid-cols-12 gap-4 w-full">
-            <ShiftCard />
+            <ShiftCard platforms={platformStats} />
             <DashboardChart chartData={chartData} />
           </div>
         </div>
