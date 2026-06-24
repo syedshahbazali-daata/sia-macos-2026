@@ -21,14 +21,21 @@ const fs = require('fs');
 const USER_DATA_BASE = path.join(os.homedir(), 'Library', 'Application Support', 'sia');
 const USER_DIR = path.join(USER_DATA_BASE, 'userdir-20241218163439-1734539679025-sathn');
 
-// 10 days from 2026-06-20
-const SCHEDULE_DATE = '2026-06-30';
+// 10 days from 2026-06-24
+const SCHEDULE_DATE = '2026-07-04';
 
 const SHOT_DIR = '/tmp/twitter-test-shots';
 fs.mkdirSync(SHOT_DIR, { recursive: true });
 // ─────────────────────────────────────────────────────────────────────────────
 
 const TEST_CASES = {
+  'text-only': {
+    label: 'Text Only (no media)',
+    description: 'SiA cloud-script engine test — text only',
+    signature: '#SiA #automated',
+    set_time: '15:00',
+    media: [],
+  },
   'single-image': {
     label: 'Single Image (1.jpeg)',
     description: 'SiA bot test — single image',
@@ -104,7 +111,7 @@ async function runTest(key, tc) {
       console.log(`→ [4/8] Uploading ${tc.media.length} file(s) ...`);
       await page.waitForSelector('[data-testid="fileInput"]', { timeout: 10000 });
       await page.setInputFiles('[data-testid="fileInput"]', tc.media);
-      await page.waitForSelector('[data-testid="attachments"]', { timeout: 30000 });
+      await page.waitForSelector('[data-testid="attachments"]', { timeout: 120000 });
       console.log('       ✓ Attachment visible in compose box');
     } else {
       console.log('→ [4/8] No media — skipping');

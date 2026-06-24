@@ -121,9 +121,21 @@ export async function runCloudScript(
     typeText: (selector: string, value: string, delay?: number) =>
       page.type(selector, value, { delay: delay ?? 20 }),
 
-    // File upload
+    // File upload via setInputFiles (for hidden file inputs — Twitter, Instagram)
     upload: (selector: string, paths: string | string[]) =>
       page.setInputFiles(selector, Array.isArray(paths) ? paths : [paths]),
+
+    // File upload via OS file chooser dialog (for YouTube Studio, TikTok etc.)
+    chooseFiles: async (clickSelector: string, files: string | string[]) => {
+      const [fileChooser] = await Promise.all([
+        page.waitForEvent('filechooser'),
+        page.click(clickSelector, { timeout: 30000 }),
+      ])
+      await fileChooser.setFiles(Array.isArray(files) ? files : [files])
+    },
+
+    // Keyboard key press on an element
+    press: (selector: string, key: string) => page.press(selector, key),
 
     // Waiting
     wait: (selector: string, timeout?: number) =>

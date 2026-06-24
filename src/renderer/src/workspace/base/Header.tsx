@@ -1,11 +1,13 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faBars, faBell, faEnvelope, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
+import { faBars, faBell, faEnvelope, faMagnifyingGlass, faArrowsRotate } from '@fortawesome/free-solid-svg-icons'
 import { useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import { getSelectedInstance } from '@renderer/redux/slices/SelectedInstanceSlice'
 import { Button } from '@renderer/components/ui/button'
 import { usePlan } from '@renderer/hooks/usePlan'
+import { getLicensesByNumber } from '@renderer/lib/license'
+import { storage, enums } from '@renderer/helpers/storageHelper'
 
 const PLAN_BADGE: Record<string, { label: string; variant: 'free' | 'pro' | 'enterprise' }> = {
   free: { label: 'Free Plan', variant: 'free' },
@@ -20,6 +22,34 @@ export function Header({ activeItem }: { activeItem: string }): JSX.Element {
   const notificationRef = useRef<HTMLDivElement>(null)
   const { plan } = usePlan()
   const planBadge = PLAN_BADGE[plan] ?? PLAN_BADGE.free
+
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshError, setRefreshError] = useState(false)
+
+  const handleRefresh = async () => {
+    if (refreshing) return
+    setRefreshing(true)
+    setRefreshError(false)
+    try {
+      // 1. Clear cached bot scripts so next run fetches fresh from Firestore
+      await window.electron.ipcRenderer.invoke('clear-script-cache')
+
+      // 2. Re-fetch license from Firebase and update localStorage
+      const stored = storage.getParsed(enums.LICENSE, null)
+      const licenseCode = stored?.license as string | undefined
+      if (licenseCode) {
+        const updated = await getLicensesByNumber(licenseCode)
+        if (updated) storage.set(enums.LICENSE, updated)
+      }
+
+      // 3. Reload the renderer to pick up fresh license + re-init Redux
+      window.location.reload()
+    } catch {
+      setRefreshError(true)
+      setRefreshing(false)
+      setTimeout(() => setRefreshError(false), 3000)
+    }
+  }
 
   const handleMessageClick = () => {
     navigate('/masterinbox')
@@ -58,6 +88,16 @@ export function Header({ activeItem }: { activeItem: string }): JSX.Element {
         <Button className="rounded-full font-medium py-0" variant={planBadge.variant}>
           {planBadge.label}
         </Button>
+        <div
+          onClick={handleRefresh}
+          title="Refresh license & bot scripts from cloud"
+          className={`cursor-pointer hover:bg-gray-100 rounded-full p-2 transition-colors ${refreshError ? 'text-red-500' : 'text-black'}`}
+        >
+          <FontAwesomeIcon
+            icon={faArrowsRotate}
+            className={`md:text-lg text-sm ${refreshing ? 'animate-spin' : ''}`}
+          />
+        </div>
         <FontAwesomeIcon icon={faMagnifyingGlass} className="text-black md:text-lg text-sm" />
         <input
           type="text"
