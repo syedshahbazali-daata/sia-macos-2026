@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faBars, faBell, faEnvelope, faMagnifyingGlass, faArrowsRotate } from '@fortawesome/free-solid-svg-icons'
+import { faBars, faBell, faEnvelope, faMagnifyingGlass, faArrowsRotate, faGlobe } from '@fortawesome/free-solid-svg-icons'
 import { useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
@@ -25,6 +25,32 @@ export function Header({ activeItem }: { activeItem: string }): JSX.Element {
 
   const [refreshing, setRefreshing] = useState(false)
   const [refreshError, setRefreshError] = useState(false)
+  const [browserExists, setBrowserExists] = useState(true)
+  const [browserDownloading, setBrowserDownloading] = useState(false)
+  const [browserProgress, setBrowserProgress] = useState(0)
+
+  useEffect(() => {
+    window.api.getBrowserExists().then(setBrowserExists)
+  }, [])
+
+  const handleBrowserDownload = (): void => {
+    if (browserDownloading) return
+    setBrowserDownloading(true)
+    setBrowserProgress(0)
+    window.electron.ipcRenderer.send('download-browser', '')
+    window.electron.ipcRenderer.on('download-progress', (_: unknown, pct: number) => {
+      setBrowserProgress(pct)
+    })
+    window.electron.ipcRenderer.once('download-browser-complete', () => {
+      setBrowserExists(true)
+      setBrowserDownloading(false)
+      window.electron.ipcRenderer.removeAllListeners('download-progress')
+    })
+    window.electron.ipcRenderer.once('download-browser-error', () => {
+      setBrowserDownloading(false)
+      window.electron.ipcRenderer.removeAllListeners('download-progress')
+    })
+  }
 
   const handleRefresh = async () => {
     if (refreshing) return
@@ -88,6 +114,20 @@ export function Header({ activeItem }: { activeItem: string }): JSX.Element {
         <Button className="rounded-full font-medium py-0" variant={planBadge.variant}>
           {planBadge.label}
         </Button>
+        {!browserExists && (
+          <div
+            onClick={handleBrowserDownload}
+            title={browserDownloading ? `Downloading browser ${browserProgress.toFixed(0)}%` : 'Download automation browser'}
+            className="relative cursor-pointer hover:bg-gray-100 rounded-full p-2 transition-colors text-orange-500"
+          >
+            <FontAwesomeIcon icon={faGlobe} className="md:text-lg text-sm" />
+            {browserDownloading && (
+              <span className="absolute -top-1 -right-1 text-[9px] bg-orange-500 text-white rounded-full px-1 leading-tight">
+                {browserProgress.toFixed(0)}%
+              </span>
+            )}
+          </div>
+        )}
         <div
           onClick={handleRefresh}
           title="Refresh license & bot scripts from cloud"

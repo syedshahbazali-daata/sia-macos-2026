@@ -143,9 +143,15 @@ const Dashboard: React.FC = () => {
   const [licenseExpiry, setLicenseExpiry] = useState<{ days: number } | null>(null)
   const [schedules, setSchedules] = useState<SchedulerRecord[]>([])
   const [utcTime, setUtcTime] = useState<string>(new Date().toISOString().slice(11, 19) + ' UTC')
+  const [browserExists, setBrowserExists] = useState(true)
+  const [browserBannerDismissed, setBrowserBannerDismissed] = useState(false)
 
   const license = storage.get(enums.LICENSE)?.expiry_date?.seconds
   const instanceId = localStorage.getItem('selectedInstanceId')
+
+  useEffect(() => {
+    window.api.getBrowserExists().then(setBrowserExists)
+  }, [])
 
   useEffect(() => {
     const load = async (): Promise<void> => {
@@ -175,6 +181,26 @@ const Dashboard: React.FC = () => {
     <>
       <div className="w-full h-full p-4 flex flex-col items-center justify-center max-w-full max-h-full">
         <div className="w-full h-full mx-auto gap-4 flex flex-col items-center justify-start">
+          {/* Browser not installed banner */}
+          {!browserExists && !browserBannerDismissed && (
+            <div className="flex items-center justify-between gap-3 px-4 py-3 bg-orange-50 border border-orange-200 rounded-xl w-full">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                  <span className="text-orange-500 text-base">⚠</span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-orange-800">Automation browser not installed</p>
+                  <p className="text-xs text-orange-600">The browser is required to run scheduling bots. Click the globe icon in the top bar to download it.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setBrowserBannerDismissed(true)}
+                className="text-orange-400 hover:text-orange-600 text-xl leading-none flex-shrink-0 px-1"
+              >
+                ×
+              </button>
+            </div>
+          )}
           {/* Top Section */}
           <Card className="p-4 bg-white w-full">
             {/* Header with Time Period Selector */}

@@ -39,11 +39,7 @@ const SplashScreen = (): JSX.Element => {
           return
         }
 
-        const browserExists = await window.api.getBrowserExists()
-
-        if (!browserExists) {
-          navigate('/browser/download')
-        } else if (selectedId) {
+        if (selectedId) {
           navigate('/dashboard')
         } else if (instances.length === 0) {
           navigate('/instance/create')
