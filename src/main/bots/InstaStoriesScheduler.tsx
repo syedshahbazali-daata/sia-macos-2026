@@ -112,6 +112,7 @@ async function InstaStoryScheduler(
 
     } catch (error) {
       console.error(`Error scheduling story for ${schedule.id}:`, error);
+      throw error
     }
   }
 }

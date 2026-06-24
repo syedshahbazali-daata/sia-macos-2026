@@ -5,12 +5,21 @@ import { useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import { getSelectedInstance } from '@renderer/redux/slices/SelectedInstanceSlice'
 import { Button } from '@renderer/components/ui/button'
+import { usePlan } from '@renderer/hooks/usePlan'
+
+const PLAN_BADGE: Record<string, { label: string; variant: 'free' | 'pro' | 'enterprise' }> = {
+  free: { label: 'Free Plan', variant: 'free' },
+  pro: { label: 'Pro Plan', variant: 'free' },
+  enterprise: { label: 'Enterprise', variant: 'free' },
+}
 
 export function Header({ activeItem }: { activeItem: string }): JSX.Element {
   const navigate = useNavigate()
   const selectedInstance = useSelector(getSelectedInstance)
   const [showNotifications, setShowNotifications] = useState(false)
   const notificationRef = useRef<HTMLDivElement>(null)
+  const { plan } = usePlan()
+  const planBadge = PLAN_BADGE[plan] ?? PLAN_BADGE.free
 
   const handleMessageClick = () => {
     navigate('/masterinbox')
@@ -46,8 +55,8 @@ export function Header({ activeItem }: { activeItem: string }): JSX.Element {
         </p>
       </div>
       <div className="flex gap-2.5 ml-auto items-center">
-        <Button className="bg-black rounded-full font-medium py-0" variant="free">
-          Free Trial Version
+        <Button className="rounded-full font-medium py-0" variant={planBadge.variant}>
+          {planBadge.label}
         </Button>
         <FontAwesomeIcon icon={faMagnifyingGlass} className="text-black md:text-lg text-sm" />
         <input

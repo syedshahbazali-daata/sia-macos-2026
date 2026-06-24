@@ -25,29 +25,33 @@ const SplashScreen = (): JSX.Element => {
 
   useEffect(() => {
     const checkLicense = async (): Promise<void> => {
-      const license = storage.get(enums.LICENSE)
+      try {
+        const license = storage.get(enums.LICENSE)
 
-      if (!license) {
+        if (!license) {
+          navigate('/license')
+          return
+        }
+
+        const isValid = await verifyLicense(license.license)
+        if (!isValid) {
+          navigate('/license')
+          return
+        }
+
+        const browserExists = await window.api.getBrowserExists()
+
+        if (!browserExists) {
+          navigate('/browser/download')
+        } else if (selectedId) {
+          navigate('/dashboard')
+        } else if (instances.length === 0) {
+          navigate('/instance/create')
+        } else {
+          navigate('/instance')
+        }
+      } catch {
         navigate('/license')
-        return
-      }
-
-      const isValid = await verifyLicense(license.license)
-      if (!isValid) {
-        navigate('/license')
-        return
-      }
-
-      const browserExists = await window.api.getBrowserExists()
-
-      if (!browserExists) {
-        navigate('/browser/download')
-      } else if (selectedId) {
-        navigate('/dashboard')
-      } else if (instances.length === 0) {
-        navigate('/instance/create')
-      } else {
-        navigate('/instance')
       }
     }
 

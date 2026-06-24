@@ -1,7 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck
 
-import {Page} from 'playwright';
+import {Page} from 'patchright';
 
 interface MediaPath { filePath: string; previewUrl: string; isPaid: boolean }
 
@@ -27,6 +27,7 @@ async function InstaFbPostScheduler(
   jsonFilePath: string,
   moveToHistory: (schedulerId: string, jsonFilePath: string) => void
 ): Promise<void> {
+  try {
   for (const schedule of schedules) {
     const {description_text: description, platform, set_date: date, set_time: time} = schedule;
 
@@ -136,6 +137,10 @@ async function InstaFbPostScheduler(
 
     // Move to history
     moveToHistory(schedule.id, jsonFilePath);
+  }
+  } catch (error) {
+    console.error('Error in InstaFbPostScheduler:', error)
+    throw error
   }
 }
 

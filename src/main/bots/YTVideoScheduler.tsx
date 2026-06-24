@@ -2,7 +2,7 @@
 // @ts-nocheck
 
 
-import { Page } from 'playwright';
+import { Page } from 'patchright';
 
 interface MediaPath { filePath: string; previewUrl: string; isPaid: boolean }
 
@@ -110,6 +110,7 @@ async function YTVideoScheduler(
     }
   } catch (error) {
     console.error('Error during scheduling:', error);
+    throw error
   }
 }
 

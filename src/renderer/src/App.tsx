@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { HashRouter as Router, Route, Routes, Navigate } from 'react-router-dom'
 import { Provider } from 'react-redux'
 import store from './redux/store'
@@ -24,8 +24,18 @@ import Faq from './workspace/pages/Faq/Faq'
 
 // UI
 import { Toaster } from './components/ui/toaster'
+import SchedulerErrorModal, { SchedulerErrorData } from './workspace/pages/schedulers/components/SchedulerError/SchedulerErrorModal'
 
 const App: React.FC = () => {
+  const [schedulerError, setSchedulerError] = useState<SchedulerErrorData | null>(null)
+
+  useEffect(() => {
+    const handler = (_event: unknown, data: SchedulerErrorData) => setSchedulerError(data)
+    window.electron.ipcRenderer.on('scheduler-error', handler)
+    return () => {
+      window.electron.ipcRenderer.removeListener('scheduler-error', handler)
+    }
+  }, [])
   const routes = [
     { path: '/', element: <SplashScreen />, layout: OnboardingLayout },
     { path: '/license', element: <LicensePage />, layout: OnboardingLayout },
@@ -67,6 +77,12 @@ const App: React.FC = () => {
     <Provider store={store}>
       <Router>
         <Toaster />
+        {schedulerError && (
+          <SchedulerErrorModal
+            error={schedulerError}
+            onClose={() => setSchedulerError(null)}
+          />
+        )}
         <Routes>
           <Route path="*" element={<Navigate to="/" replace />} />
           {routes.map((route, index) => {

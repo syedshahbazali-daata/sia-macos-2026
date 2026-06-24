@@ -4,6 +4,7 @@ import { Button } from '@renderer/components/ui/button'
 import { RootState } from '@renderer/redux/store'
 import { clearSchedulersByPlatform, deleteScheduler } from '@renderer/redux/slices/SchedulerSlice'
 import { useDispatch, useSelector } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
 import DeleteConfirmationModal from '../MediaSection/components/MediaPreview/components/DeleteConfirmationModal'
 import React, { useEffect, useState } from 'react'
 import ViewScheduleModal from './components/ViewScheduleModal/ViewScheduleModal'
@@ -30,6 +31,7 @@ const ScheduledPlans = (): JSX.Element => {
   const [showModalId, setShowModalId] = useState<string | null>(null)
   const currentScheduler = useSelector((state: RootState) => state.currentScheduler)
   const dispatch = useDispatch()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
 
 
@@ -94,7 +96,7 @@ const ScheduledPlans = (): JSX.Element => {
 
   const handleRunScheduler = async (): Promise<void> => {
     if (!isCurrentPlatformAccountAttached) {
-      alert("Go to your instance settings and attach your Social Media account")
+      navigate('/settings?tab=attached-account')
       return
     }
 

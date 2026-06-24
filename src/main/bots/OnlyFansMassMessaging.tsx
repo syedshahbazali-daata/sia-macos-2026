@@ -24,7 +24,7 @@ async function OnlyFansMassMessageScheduler(
   page: Page,
   schedules: Schedule[],
   jsonFilePath: string,
-  moveToHistory: boolean
+  moveToHistory: (schedulerId: string, jsonFilePath: string) => void
 ): Promise<void> {
 
   const parseDate = (dateString: string): [string, number, number] => {
@@ -175,6 +175,7 @@ async function OnlyFansMassMessageScheduler(
 
     } catch (error) {
       console.error(`Error processing schedule ID: ${schedule.id}`, error);
+      throw error
     }
   }
 }

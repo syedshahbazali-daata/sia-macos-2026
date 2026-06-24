@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // License collection: read-only for everyone (app validates without auth)
+    match /license/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Error reports: write-only (app submits, only admins read via console)
+    match /error_reports/{docId} {
+      allow read: if false;
+      allow write: if true;
+    }
+  }
+}

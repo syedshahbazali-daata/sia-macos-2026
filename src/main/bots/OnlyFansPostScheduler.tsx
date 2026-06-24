@@ -164,6 +164,7 @@ async function OfPostScheduler(
 
     } catch (error) {
       console.error(`Error processing schedule ID: ${schedule.id}`, error);
+      throw error
     }
   }
 }

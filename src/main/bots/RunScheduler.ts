@@ -10,6 +10,13 @@ import { OnlyFansMassMessageScheduler } from './OnlyFansMassMessaging'
 import { InstaFbPostScheduler } from './InstaFbPostScheduler'
 import { BrowserWindow } from 'electron'
 
+export interface SchedulerErrorData {
+  platform: string
+  errorMessage: string
+  screenshotBase64: string
+  timestamp: number
+}
+
 function readSchedulersFromFile(jsonFilePath: string): Scheduler[] {
   try {
     if (!existsSync(jsonFilePath)) {
@@ -78,13 +85,35 @@ async function runScheduler(
 
   const page = await browserContext.newPage()
   const handler = PLATFORM_MAP[platform.toLowerCase()]
-  if (handler) {
-    await handler(page, schedules, jsonFilePath, moveSchedulerToHistory)
-  } else {
+
+  if (!handler) {
     console.error(`No handler registered for platform: ${platform}`)
+    await browserContext.close()
+    return
   }
 
-  await browserContext.close()
+  try {
+    await handler(page, schedules, jsonFilePath, moveSchedulerToHistory)
+  } catch (error) {
+    let screenshotBase64 = ''
+    try {
+      const buf = await page.screenshot()
+      screenshotBase64 = (buf as Buffer).toString('base64')
+    } catch {
+      // screenshot failed — continue without it
+    }
+
+    const errorData: SchedulerErrorData = {
+      platform,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      screenshotBase64,
+      timestamp: Date.now(),
+    }
+
+    BrowserWindow.getAllWindows()[0]?.webContents.send('scheduler-error', errorData)
+  } finally {
+    await browserContext.close()
+  }
 }
 
 export default runScheduler

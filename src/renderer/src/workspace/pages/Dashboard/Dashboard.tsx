@@ -62,9 +62,7 @@ function convertEpochToDaysHours(epochTimestamp) {
 
 const Dashboard: React.FC<DashboardProps> = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('Today')
-  const [licenseExpiry, setLicenseExpiry] = useState({
-    days: 100
-  })
+  const [licenseExpiry, setLicenseExpiry] = useState<{ days: number } | null>(null)
   const [{ chartData, metrics }, setChartAndMetrics] = useState(generateRandomData())
   const [utcTime, setUtcTime] = useState<string>(new Date().toISOString().slice(11, 19) + ' UTC')
   const license = storage.get(enums.LICENSE)?.expiry_date?.seconds
@@ -141,7 +139,7 @@ const Dashboard: React.FC<DashboardProps> = () => {
         </div>
 
         <div>
-          {licenseExpiry.days * -1 <= 7 && (
+          {licenseExpiry !== null && licenseExpiry.days * -1 <= 7 && (
             <div className="max-w-md p-4 absolute bottom-10 right-10 bg-yellow-100 border-r-4 border-yellow-500 text-yellow-900 rounded-md shadow-md">
               <div className="flex items-center">
                 <svg
@@ -158,9 +156,11 @@ const Dashboard: React.FC<DashboardProps> = () => {
                 <div>
                   <p className="font-semibold text-lg">License Expiration Notice</p>
                   <p className="text-sm">
-                    Your license will expire in{' '}
-                    <span className="font-bold">{licenseExpiry.days * -1} days</span>. Please renew
-                    it to continue using the service.
+                    {licenseExpiry.days > 0 ? (
+                      <>Your license expired <span className="font-bold">{licenseExpiry.days} day{licenseExpiry.days !== 1 ? 's' : ''} ago</span>. Please renew it to continue using the service.</>
+                    ) : (
+                      <>Your license will expire in <span className="font-bold">{licenseExpiry.days * -1} day{licenseExpiry.days * -1 !== 1 ? 's' : ''}</span>. Please renew it to continue using the service.</>
+                    )}
                   </p>
                 </div>
               </div>

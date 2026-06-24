@@ -210,6 +210,7 @@ async function TikTokPostScheduler(page: Page, schedules: Schedule[], jsonFilePa
     }
   } catch (error) {
     console.error('Error in TikTokPostScheduler:', error);
+    throw error
   }
 }
 

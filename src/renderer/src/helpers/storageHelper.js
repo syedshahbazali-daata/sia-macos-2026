@@ -29,16 +29,17 @@ export const storage = {
     const value = encryptStorage.getItem(key) // Decrypts automatically
 
     if (value === undefined || value === null) {
-      return _default // Return default if key does not exist
+      return _default
     }
 
+    // encrypt-storage v2 auto-parses JSON on getItem, so the value may
+    // already be an object. Only parse if it's still a string.
+    if (typeof value === 'object') return value
+
     try {
-      // Since `encryptStorage.getItem()` already returns a decrypted string,
-      // You only need to parse it if it's in JSON format.
       return JSON.parse(value)
     } catch (e) {
-      console.error('Error parsing JSON from decrypted storage', e)
-      return _default // Return default if parsing fails
+      return _default
     }
   }
 }
