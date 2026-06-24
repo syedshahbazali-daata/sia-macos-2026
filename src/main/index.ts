@@ -39,6 +39,7 @@ function createWindow(): void {
     height: 780,
     show: false,
     autoHideMenuBar: true,
+    title: 'SiA',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
