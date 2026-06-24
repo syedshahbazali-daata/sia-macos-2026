@@ -9,6 +9,7 @@ import { OfPostScheduler } from './OnlyFansPostScheduler'
 import { OnlyFansMassMessageScheduler } from './OnlyFansMassMessaging'
 import { InstaFbPostScheduler } from './InstaFbPostScheduler'
 import { BrowserWindow } from 'electron'
+import { runCloudScript } from './ScriptRunner'
 
 export interface SchedulerErrorData {
   platform: string
@@ -93,7 +94,16 @@ async function runScheduler(
   }
 
   try {
-    await handler(page, schedules, jsonFilePath, moveSchedulerToHistory)
+    const ranCloud = await runCloudScript(
+      platform,
+      page,
+      schedules,
+      jsonFilePath,
+      moveSchedulerToHistory,
+    )
+    if (!ranCloud) {
+      await handler(page, schedules, jsonFilePath, moveSchedulerToHistory)
+    }
   } catch (error) {
     let screenshotBase64 = ''
     try {
