@@ -18,7 +18,14 @@ export function registerBrowserIpc(): void {
   })
 
   ipcMain.on('download-browser', async (event) => {
-    await downloadBrowser(() => event.reply('download-browser-complete'))
+    try {
+      await downloadBrowser(
+        (pct) => event.reply('download-progress', pct),
+        () => event.reply('download-browser-complete')
+      )
+    } catch (err) {
+      event.reply('download-browser-error', err instanceof Error ? err.message : String(err))
+    }
   })
 
   ipcMain.on('run-browser', (_, userDirId: string) => {
