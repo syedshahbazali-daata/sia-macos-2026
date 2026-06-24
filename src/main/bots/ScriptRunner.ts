@@ -121,11 +121,11 @@ export async function runCloudScript(
     typeText: (selector: string, value: string, delay?: number) =>
       page.type(selector, value, { delay: delay ?? 20 }),
 
-    // File upload via setInputFiles (for hidden file inputs — Twitter, Instagram)
+    // File upload via setInputFiles (for hidden file inputs — Twitter)
     upload: (selector: string, paths: string | string[]) =>
       page.setInputFiles(selector, Array.isArray(paths) ? paths : [paths]),
 
-    // File upload via OS file chooser dialog (for YouTube Studio, TikTok etc.)
+    // File upload via OS file chooser dialog (YouTube Studio, TikTok etc.)
     chooseFiles: async (clickSelector: string, files: string | string[]) => {
       const [fileChooser] = await Promise.all([
         page.waitForEvent('filechooser'),
@@ -134,8 +134,58 @@ export async function runCloudScript(
       await fileChooser.setFiles(Array.isArray(files) ? files : [files])
     },
 
-    // Keyboard key press on an element
+    // File chooser with an optional intermediate click before the dialog opens (Meta Business Suite)
+    chooseFilesViaIntermediate: async (
+      primarySelector: string,
+      intermediateSelector: string | null,
+      files: string | string[],
+    ) => {
+      const promise = page.waitForEvent('filechooser')
+      await page.click(primarySelector)
+      if (intermediateSelector) {
+        try {
+          await page.click(intermediateSelector, { timeout: 3000 })
+        } catch {
+          // intermediate step is conditional — ignore if not present
+        }
+      }
+      const fileChooser = await promise
+      await fileChooser.setFiles(Array.isArray(files) ? files : [files])
+    },
+
+    // Keyboard key press on a specific element
     press: (selector: string, key: string) => page.press(selector, key),
+
+    // Global keyboard press (no element target) — used by Meta story composer
+    keyboardPress: (key: string) => page.keyboard.press(key),
+
+    // Make a DOM element visible (TikTok hides the file input)
+    makeVisible: (selector: string) =>
+      page.evaluate((sel: string) => {
+        const el = document.querySelector(sel) as HTMLElement | null
+        if (el) el.style.display = 'block'
+      }, selector),
+
+    // Check if an element is visible
+    isVisible: (selector: string) => page.locator(selector).isVisible(),
+
+    // Get inner text of an element
+    getText: (selector: string) => page.locator(selector).innerText(),
+
+    // Click first XPath result via document.evaluate (bypasses Playwright selector engine)
+    xpathClickFirst: (xpath: string) =>
+      page.evaluate((xp: string) => {
+        const el = document.evaluate(
+          xp, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null,
+        ).singleNodeValue as HTMLElement | null
+        if (el) el.click()
+      }, xpath),
+
+    // Click every element matching a CSS selector
+    clickAll: (selector: string) =>
+      page.evaluate((sel: string) => {
+        document.querySelectorAll(sel).forEach((el) => (el as HTMLElement).click())
+      }, selector),
 
     // Waiting
     wait: (selector: string, timeout?: number) =>

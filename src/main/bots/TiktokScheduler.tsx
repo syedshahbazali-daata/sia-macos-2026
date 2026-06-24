@@ -1,217 +1,117 @@
-import {Page} from 'patchright';
+import { Page } from 'patchright'
+import type { Scheduler } from '../types'
 
-interface MediaPath { filePath: string; previewUrl: string; isPaid: boolean }
+async function TikTokPostScheduler(
+  page: Page,
+  schedules: Scheduler[],
+  jsonFilePath: string,
+  moveToHistory: (schedulerId: string, jsonFilePath: string) => void,
+): Promise<void> {
+  for (const schedule of schedules) {
+    if (schedule.isScheduled !== 0) continue
 
-interface Schedule {
-  id: string;
-  Instance_id: string;
-  description_type: string;
-  city: string;
-  isScheduled: number;
-  description_text: string;
-  signature: string;
-  set_price: number;
-  set_date: string;
-  created_at: number;
-  set_time: string;
-  media_path: MediaPath[];
-  platform: string;
-}
+    try {
+      const mediaFile = schedule.media_path.map((f) => f.filePath)
+      const caption = `${schedule.description_text}\n${schedule.signature}`
+      const months = [
+        'January','February','March','April','May','June',
+        'July','August','September','October','November','December',
+      ]
+      const [year, month, day] = schedule.set_date.split('-')
 
-async function TikTokPostScheduler(page: Page, schedules: Schedule[], jsonFilePath, moveToHistory): Promise<void> {
+      await page.goto('https://www.tiktok.com/creator#/upload?scene=creator_center', { timeout: 0 })
 
-  const getHeaderScript = (city: string) => {
-    return `
-    (() => {
-      var fullWidthDiv = document.createElement('div');
-      fullWidthDiv.style.backgroundColor = '#4B586C';
-      fullWidthDiv.style.color = 'white';
-      fullWidthDiv.style.padding = '20px';
-      fullWidthDiv.style.textAlign = 'center';
-      fullWidthDiv.style.width = '100%'; // Set the width to 100% to make it full width
-      fullWidthDiv.style.position = 'fixed'; // Set position to fixed
-      fullWidthDiv.style.top = '0'; // Align to top of the viewport
-      fullWidthDiv.style.zIndex = '9999'; // Set a high z-index to ensure it's on top
-      fullWidthDiv.textContent = 'Uploading to TikTok from ${city}';
-      var body = document.getElementsByTagName('body')[0];
-      body.insertBefore(fullWidthDiv, body.firstChild);
-    })();
-    `;
-  };
-
-  try {
-    for (const schedule of schedules) {
-      console.log(`Scheduling post for ${schedule.id}`);
-      await page.goto('https://www.tiktok.com/', {timeout: 0});
-      await page.goto('https://www.tiktok.com/creator#/upload?scene=creator_center', {timeout: 0});
-
-      // Use city as header text
-      const headerText = schedule.city;
-      await page.evaluate(getHeaderScript(headerText));
-
-
-      const mediaFile = schedule.media_path.map(file => file.filePath);
-      const caption: string = schedule.description_text  + '\n' + schedule.signature;
-
-
-      // Upload media files
+      // TikTok hides the file input — make it visible before setInputFiles
       await page.evaluate(() => {
-        const inputFile = document.querySelector('input[type=file]') as HTMLInputElement;
-        if (inputFile) {
-          inputFile.style.display = 'block';
-        }
-      });
-      await page.setInputFiles('input[type=file]', mediaFile);
+        const input = document.querySelector('input[type=file]') as HTMLInputElement | null
+        if (input) input.style.display = 'block'
+      })
+      await page.setInputFiles('input[type=file]', mediaFile)
 
-      // Post content
-      await page.waitForSelector('xpath=//div[@role="combobox"]');
-      await page.fill('xpath=//div[@role="combobox"]', "");
-      await page.type('xpath=//div[@role="combobox"]', caption);
+      await page.waitForSelector('xpath=//div[@role="combobox"]')
+      await page.fill('xpath=//div[@role="combobox"]', '')
+      await page.type('xpath=//div[@role="combobox"]', caption)
 
-      // Wait for the 'Post' button to become enabled and visible
-      let postButtonVisible = false;
-      while (!postButtonVisible) {
-        const postButton = await page.locator('xpath=//button[not(@disabled)]//div[text()="Post"]');
-        postButtonVisible = await postButton.isVisible() && !(await postButton.isDisabled());
-        if (!postButtonVisible) {
-          console.log('Waiting for the post button to become visible and enabled');
-          await page.waitForTimeout(2000);
-        }
+      // Wait for Post button to be ready
+      let postButtonReady = false
+      while (!postButtonReady) {
+        const btn = page.locator('xpath=//button[not(@disabled)]//div[text()="Post"]')
+        postButtonReady = (await btn.isVisible()) && !(await btn.isDisabled())
+        if (!postButtonReady) await page.waitForTimeout(2000)
       }
 
-      // click on //label[contains(text(), 'chedule')]/../..
-      const scheduleBtnXPath = '//label[contains(text(), "chedule")]/..';
-      await page.locator(scheduleBtnXPath).click()
+      await page.locator('xpath=//label[contains(text(), "chedule")]/..').click()
 
-      //  for the '//*[text()='Allow']' button to become enabled and visible
       try {
-        await page.waitForSelector('xpath=//*[text()="Allow"]', {timeout: 3000});
-        await page.locator('//*[text()="Allow"]').click()
-
-      } catch (error) {
-        console.log("Allow button not found")
+        await page.waitForSelector('xpath=//*[text()="Allow"]', { timeout: 3000 })
+        await page.locator('xpath=//*[text()="Allow"]').click()
+      } catch {
+        // Allow dialog not shown
       }
 
-
-      const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October',
-        'November', 'December'];
-      const date = schedule.set_date
-      const [year, month, day] = date.split('-');
-      const datePickerXPath = "//input[contains(@value, '-')]";
-
-
-      const monthTitleXPath = "//*[contains(@class, 'month-title')]"
-
-      const yearTitleXPath = "//*[contains(@class, 'year-title')]"
-
-      const previousMonthXPath = "//*[contains(@class, 'arrow')][1]";
-      const nextMonthXPath = "//*[contains(@class, 'arrow')][2]";
-      const dayXPath = `//*[contains(@class, 'day valid') or contains(@class, 'day selected')][text()='${day}']`;
-
-      await page.click(datePickerXPath);
+      // Navigate calendar to the target month/year/day
+      const datePickerXPath = '//input[contains(@value, "-")]'
+      await page.click(datePickerXPath)
 
       while (true) {
-        let monthTitle, yearTitle;
-
+        let monthTitle: string
         try {
-          monthTitle = await page.locator(monthTitleXPath).innerText();
-        } catch (e) {
-          await page.click(datePickerXPath);
-          continue;
+          monthTitle = await page.locator('xpath=//*[contains(@class, "month-title")]').innerText()
+        } catch {
+          await page.click(datePickerXPath)
+          continue
         }
+        const yearTitle = await page.locator('xpath=//*[contains(@class, "year-title")]').innerText()
+        const currentMonthIndex = months.indexOf(monthTitle)
+        const targetYear = parseInt(year)
+        const currentYear = parseInt(yearTitle)
+        const targetMonth = parseInt(month) - 1
 
-        yearTitle = await page.locator(yearTitleXPath).innerText();
-        const currentMonthIndex = months.indexOf(monthTitle);
-
-        if (parseInt(yearTitle) === parseInt(year)) {
-          if (currentMonthIndex === parseInt(month) - 1) {
-            await page.click(dayXPath);
-            break;
-          }
-
-          if (currentMonthIndex < parseInt(month) - 1) {
-            await page.click(nextMonthXPath);
-            continue;
-          } else {
-            await page.click(previousMonthXPath);
-            continue;
-          }
+        if (currentYear === targetYear && currentMonthIndex === targetMonth) {
+          await page.click(
+            `xpath=//*[contains(@class, "day valid") or contains(@class, "day selected")][text()="${parseInt(day)}"]`,
+          )
+          break
         }
-
-        if (parseInt(yearTitle) < parseInt(year)) {
-          await page.click(nextMonthXPath);
-          continue;
-        } else {
-          await page.click(previousMonthXPath);
-          continue;
-        }
+        const goNext =
+          currentYear < targetYear ||
+          (currentYear === targetYear && currentMonthIndex < targetMonth)
+        await page.click(
+          goNext
+            ? 'xpath=//*[contains(@class, "arrow")][2]'
+            : 'xpath=//*[contains(@class, "arrow")][1]',
+        )
       }
 
-      // Set time
-      const formatTime = (time) => {
-        let [hour, minute] = time.split(':').map(Number);
-        if (minute % 5 === 0) {
-          return `${hour}:${minute}`;
-        } else {
-          minute = minute + 5 - (minute % 5);
-          if (minute === 60) {
-            minute = 0;
-            hour += 1;
-            if (hour === 24) {
-              hour = 0;
-            }
-          }
-        }
-        return `${hour}:${minute}`;
-      };
-
-      const time_ = schedule.set_time;
-      const formattedTime = formatTime(time_).split(':');
-      // convert into str items
-      formattedTime[0] = formattedTime[0].toString();
-      formattedTime[1] = formattedTime[1].toString();
-      // if 0 then 00
-      if (formattedTime[0] === '0') {
-        formattedTime[0] = '00';
+      // Round time to nearest 5-minute mark
+      let [h, m] = schedule.set_time.split(':').map(Number)
+      if (m % 5 !== 0) {
+        m = m + 5 - (m % 5)
+        if (m === 60) { m = 0; h += 1; if (h === 24) h = 0 }
       }
+      const hStr = h === 0 ? '00' : String(h)
+      const mStr = m === 0 ? '00' : String(m)
 
-      // if 00 then 00:00
-      if (formattedTime[1] === '0') {
-        formattedTime[1] = '00';
-      }
+      await page.click('xpath=//input[contains(@value, ":")]')
+      await page.click(`xpath=//span[contains(@class, "tiktok-timepicker-left")][text()="${hStr}"]`)
+      await page.click(`xpath=//span[contains(@class, "tiktok-timepicker-right")][text()="${mStr}"]`)
+      await page.waitForTimeout(2000)
 
-      const timePickerXPath = "//input[contains(@value, ':')]";
-      const timePickerHoursXPath = `//span[contains(@class, 'tiktok-timepicker-left')][text()='${formattedTime[0]}']`;
-      const timePickerMinutesXPath = `//span[contains(@class, 'tiktok-timepicker-right')][text()='${formattedTime[1]}']`;
-
-      await page.click(timePickerXPath);
-      await page.click(timePickerHoursXPath);
-      await page.click(timePickerMinutesXPath);
-      await page.waitForTimeout(2000); // Adjust timeout if necessary
-
-
-      console.log('Post button found and is visible and enabled');
-      // wait for //button[not(@disabled)]//div[text()="Post"]/../..
-      await page.waitForSelector('xpath=//button[not(@disabled)]//div[text()="Schedule"]/../..');
+      await page.waitForSelector('xpath=//button[not(@disabled)]//div[text()="Schedule"]/../..')
       await page.evaluate(() => {
-        const postBtnXPath = '//button[not(@disabled)]//div[text()="Schedule"]/../..';
-        const postBtn = document.evaluate(postBtnXPath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue as HTMLElement;
-        if (postBtn) postBtn.click();
-      });
+        const xp = '//button[not(@disabled)]//div[text()="Schedule"]/../..'
+        const el = document.evaluate(xp, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null)
+          .singleNodeValue as HTMLElement | null
+        if (el) el.click()
+      })
 
-
-      console.log('Waiting for manage your posts button');
-      await page.waitForTimeout(6000); // Adjust timeout if necessary
-
-
-      // Move to history
-      moveToHistory(schedule.id, jsonFilePath);
-
+      await page.waitForTimeout(6000)
+      moveToHistory(schedule.id, jsonFilePath)
+    } catch (error) {
+      console.error(`TikTokPostScheduler failed for ${schedule.id}:`, error)
+      throw error
     }
-  } catch (error) {
-    console.error('Error in TikTokPostScheduler:', error);
-    throw error
   }
 }
 
-export {TikTokPostScheduler};
+export { TikTokPostScheduler }
