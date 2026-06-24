@@ -25,6 +25,7 @@ import Faq from './workspace/pages/Faq/Faq'
 // UI
 import { Toaster } from './components/ui/toaster'
 import SchedulerErrorModal, { SchedulerErrorData } from './workspace/pages/schedulers/components/SchedulerError/SchedulerErrorModal'
+import { UpdateBanner } from './components/UpdateBanner'
 
 const App: React.FC = () => {
   const [schedulerError, setSchedulerError] = useState<SchedulerErrorData | null>(null)
@@ -77,6 +78,7 @@ const App: React.FC = () => {
     <Provider store={store}>
       <Router>
         <Toaster />
+        <UpdateBanner />
         {schedulerError && (
           <SchedulerErrorModal
             error={schedulerError}

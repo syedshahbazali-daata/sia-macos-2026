@@ -11,6 +11,7 @@ declare global {
     }
     electronAPI: {
       checkForUpdates: () => void
+      installUpdate: () => void
       onUpdateAvailable: (cb: (...args: unknown[]) => void) => void
       onUpdateNotAvailable: (cb: (...args: unknown[]) => void) => void
       onDownloadProgress: (cb: (...args: unknown[]) => void) => void

@@ -21,6 +21,7 @@ const streamAPI = {
 // Auto-updater events
 const updateAPI = {
   checkForUpdates: () => ipcRenderer.send('manual-update-check'),
+  installUpdate: () => ipcRenderer.send('install-update'),
   onUpdateAvailable: (cb: (...args: unknown[]) => void) =>
     ipcRenderer.on('update-available', cb),
   onUpdateNotAvailable: (cb: (...args: unknown[]) => void) =>

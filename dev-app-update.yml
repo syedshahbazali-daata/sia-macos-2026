@@ -1,3 +1,4 @@
-provider: generic
-url: https://example.com/auto-updates
+owner: syedshahbazali-daata
+repo: sia-macos-2026
+provider: github
 updaterCacheDirName: sia-electron-updater
