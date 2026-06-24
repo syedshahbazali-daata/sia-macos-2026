@@ -1,5 +1,5 @@
 appId: com.sia.app
-productName: sia
+productName: SiA
 directories:
   buildResources: build
 files:
