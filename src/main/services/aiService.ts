@@ -136,7 +136,7 @@ export async function fetchAiModelConfig(): Promise<{ html_model: string; vision
 // ─── Platform Fixes ───────────────────────────────────────────────────────────
 
 export async function loadPlatformFixes(platformKey: string): Promise<PlatformFixes> {
-  const doc = await fetchDoc('bot_script_fixes', platformKey)
+  const doc = await fetchDoc('bot_scripts', platformKey)
   return {
     selector_fixes: (doc?.selector_fixes as SelectorFix[]) ?? [],
     injected_steps: (doc?.injected_steps as InjectedStep[]) ?? [],
@@ -144,7 +144,7 @@ export async function loadPlatformFixes(platformKey: string): Promise<PlatformFi
 }
 
 export async function savePlatformFixes(platformKey: string, fixes: PlatformFixes): Promise<void> {
-  await writeDoc('bot_script_fixes', platformKey, {
+  await writeDoc('bot_scripts', platformKey, {
     selector_fixes: fixes.selector_fixes,
     injected_steps: fixes.injected_steps,
   })
