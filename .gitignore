@@ -37,3 +37,12 @@ src/renderer/src/tailwind-output.css
 # Temporary files
 *.tmp
 *.temp
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Local MCP config
+.mcp.json
+
+# Dev notes
+build/req
