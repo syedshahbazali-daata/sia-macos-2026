@@ -227,14 +227,11 @@ const MyProfile = (): JSX.Element => {
         {/* Profile User Directory */}
         <Card className="bg-white shadow-md">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1 min-w-0 flex-1 mr-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
                 <h3 className="text-lg font-semibold text-gray-900 font-poppins">Profile Directory</h3>
-                <p className="text-sm text-gray-500 font-poppins">
-                  Browser session data for this profile
-                </p>
-                <p className="text-xs font-mono text-gray-600 bg-gray-50 rounded-md px-3 py-2 mt-2 truncate select-all">
-                  {selectedInstance?.userDir ?? '—'}
+                <p className="text-sm text-gray-500 font-poppins mt-0.5">
+                  Browser session data stored for this profile
                 </p>
               </div>
               <Button
@@ -246,12 +243,15 @@ const MyProfile = (): JSX.Element => {
                   }
                 }}
                 disabled={!selectedInstance?.userDir}
-                className="flex items-center gap-2 shrink-0"
+                className="flex items-center gap-2 text-gray-700 border-gray-300 hover:text-gray-900 hover:bg-gray-100 shrink-0 ml-4"
               >
                 <FolderOpen className="w-4 h-4" />
                 Open in Finder
               </Button>
             </div>
+            <p className="text-xs font-mono text-gray-600 bg-gray-50 rounded-md px-3 py-2 break-all select-all">
+              {selectedInstance?.userDir ?? '—'}
+            </p>
           </CardContent>
         </Card>
 
