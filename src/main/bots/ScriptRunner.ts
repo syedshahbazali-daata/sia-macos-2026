@@ -252,16 +252,34 @@ export async function runCloudScript(
             page.click(s, opts),
           )
         }
-        return page.click(winner, opts)
+        try {
+          return await page.click(winner, opts)
+        } catch (e) {
+          // Element found but blocked (e.g. overlay) — try force click, then AI
+          try {
+            return await page.click(winner, { ...(opts ?? {}), force: true })
+          } catch {
+            return triggerAiFix(
+              selector,
+              e instanceof Error ? e : new Error(String(e)),
+              (s) => page.click(s, { force: true }),
+            )
+          }
+        }
       }
       try {
         return await page.click(selector, opts)
       } catch (e) {
-        return triggerAiFix(
-          selector,
-          e instanceof Error ? e : new Error(String(e)),
-          (s) => page.click(s, opts),
-        )
+        // Try force click as quick fallback before invoking AI
+        try {
+          return await page.click(selector, { ...(opts ?? {}), force: true })
+        } catch {
+          return triggerAiFix(
+            selector,
+            e instanceof Error ? e : new Error(String(e)),
+            (s) => page.click(s, opts),
+          )
+        }
       }
     },
 
@@ -376,9 +394,12 @@ export async function runCloudScript(
     wait: async (selector: string, timeout?: number) => {
       const aiFix = findFix(selector)
       const ms = timeout ?? 30000
+      // Short timeouts are optional checks — don't invoke AI, let caller handle
+      const shouldAiFix = ms >= 10000
       if (aiFix) {
         const winner = await raceSelectors(selector, aiFix.replacement, ms)
         if (!winner) {
+          if (!shouldAiFix) throw new Error(`Wait timed out: ${selector}`)
           return triggerAiFix(selector, new Error(`Wait timed out: ${selector}`), (s) =>
             page.waitForSelector(s, { timeout: ms }),
           )
@@ -388,6 +409,7 @@ export async function runCloudScript(
       try {
         return await page.waitForSelector(selector, { timeout: ms })
       } catch (e) {
+        if (!shouldAiFix) throw e
         return triggerAiFix(
           selector,
           e instanceof Error ? e : new Error(String(e)),
