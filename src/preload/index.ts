@@ -20,6 +20,7 @@ const streamAPI = {
 
 // File utilities
 const fileAPI = {
+  getUserDataPath: (): Promise<string> => ipcRenderer.invoke('get-user-data-path'),
   openUserDir: (userDir: string): Promise<boolean> =>
     ipcRenderer.invoke('open-user-dir', userDir),
 }

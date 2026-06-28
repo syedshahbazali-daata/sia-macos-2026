@@ -4,6 +4,7 @@ declare const __APP_VERSION__: string
 
 interface Window {
   fileAPI: {
+    getUserDataPath: () => Promise<string>
     openUserDir: (userDir: string) => Promise<boolean>
   }
   aiAPI: {

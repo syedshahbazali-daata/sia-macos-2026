@@ -32,12 +32,14 @@ const MyProfile = (): JSX.Element => {
   const [isChanging, setIsChanging] = useState(false)
 
   const [pathCopied, setPathCopied] = useState(false)
+  const [userDataPath, setUserDataPath] = useState('')
   const [apiKey, setApiKey] = useState('')
   const [showKey, setShowKey] = useState(false)
   const [isSavingKey, setIsSavingKey] = useState(false)
   const [keySaved, setKeySaved] = useState(false)
 
   useEffect(() => {
+    window.fileAPI.getUserDataPath().then(setUserDataPath)
     window.aiAPI.getConfig().then((cfg) => {
       if (cfg.openrouter_api_key) setApiKey(cfg.openrouter_api_key)
     })
@@ -239,8 +241,11 @@ const MyProfile = (): JSX.Element => {
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  if (selectedInstance?.userDir) {
-                    navigator.clipboard.writeText(selectedInstance.userDir)
+                  const fullPath = selectedInstance?.userDir
+                    ? `${userDataPath}/${selectedInstance.userDir}`
+                    : ''
+                  if (fullPath) {
+                    navigator.clipboard.writeText(fullPath)
                     setPathCopied(true)
                     setTimeout(() => setPathCopied(false), 2000)
                   }
@@ -253,7 +258,9 @@ const MyProfile = (): JSX.Element => {
               </Button>
             </div>
             <p className="text-xs font-mono text-gray-600 bg-gray-50 rounded-md px-3 py-2 break-all select-all">
-              {selectedInstance?.userDir ?? '—'}
+              {selectedInstance?.userDir && userDataPath
+                ? `${userDataPath}/${selectedInstance.userDir}`
+                : '—'}
             </p>
           </CardContent>
         </Card>

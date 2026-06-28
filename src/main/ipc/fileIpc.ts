@@ -21,6 +21,8 @@ export function registerFileIpc(): void {
     return true
   })
 
+  ipcMain.handle('get-user-data-path', () => app.getPath('userData'))
+
   // Only allow opening paths inside userData to prevent arbitrary filesystem access
   ipcMain.handle('open-user-dir', async (_, userDir: string) => {
     const userData = app.getPath('userData')
