@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { TabsContent } from '@renderer/components/ui/tabs'
-import { Clock, CreditCard, Shield, User, RefreshCw, Loader2, Bot, Eye, EyeOff, FolderOpen } from 'lucide-react'
+import { Clock, CreditCard, Shield, User, RefreshCw, Loader2, Bot, Eye, EyeOff, Copy, Check } from 'lucide-react'
 import { Card, CardContent } from '@renderer/components/ui/card'
 import { Button } from '@renderer/components/ui/button'
 import { Input } from '@renderer/components/ui/input'
@@ -31,6 +31,7 @@ const MyProfile = (): JSX.Element => {
   const [newCode, setNewCode] = useState('')
   const [isChanging, setIsChanging] = useState(false)
 
+  const [pathCopied, setPathCopied] = useState(false)
   const [apiKey, setApiKey] = useState('')
   const [showKey, setShowKey] = useState(false)
   const [isSavingKey, setIsSavingKey] = useState(false)
@@ -239,14 +240,16 @@ const MyProfile = (): JSX.Element => {
                 size="sm"
                 onClick={() => {
                   if (selectedInstance?.userDir) {
-                    window.fileAPI.openUserDir(selectedInstance.userDir)
+                    navigator.clipboard.writeText(selectedInstance.userDir)
+                    setPathCopied(true)
+                    setTimeout(() => setPathCopied(false), 2000)
                   }
                 }}
                 disabled={!selectedInstance?.userDir}
                 className="flex items-center gap-2 text-gray-700 border-gray-300 hover:text-gray-900 hover:bg-gray-100 shrink-0 ml-4"
               >
-                <FolderOpen className="w-4 h-4" />
-                Open in Finder
+                {pathCopied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                {pathCopied ? 'Copied!' : 'Copy Path'}
               </Button>
             </div>
             <p className="text-xs font-mono text-gray-600 bg-gray-50 rounded-md px-3 py-2 break-all select-all">
