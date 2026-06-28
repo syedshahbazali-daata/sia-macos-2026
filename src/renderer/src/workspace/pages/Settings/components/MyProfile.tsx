@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { TabsContent } from '@renderer/components/ui/tabs'
-import { Clock, CreditCard, Shield, User, RefreshCw, Loader2, Bot, Eye, EyeOff } from 'lucide-react'
+import { Clock, CreditCard, Shield, User, RefreshCw, Loader2, Bot, Eye, EyeOff, FolderOpen } from 'lucide-react'
 import { Card, CardContent } from '@renderer/components/ui/card'
 import { Button } from '@renderer/components/ui/button'
 import { Input } from '@renderer/components/ui/input'
@@ -223,6 +223,37 @@ const MyProfile = (): JSX.Element => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Profile User Directory */}
+        <Card className="bg-white shadow-md">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1 min-w-0 flex-1 mr-4">
+                <h3 className="text-lg font-semibold text-gray-900 font-poppins">Profile Directory</h3>
+                <p className="text-sm text-gray-500 font-poppins">
+                  Browser session data for this profile
+                </p>
+                <p className="text-xs font-mono text-gray-600 bg-gray-50 rounded-md px-3 py-2 mt-2 truncate select-all">
+                  {selectedInstance?.userDir ?? '—'}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (selectedInstance?.userDir) {
+                    window.fileAPI.openUserDir(selectedInstance.userDir)
+                  }
+                }}
+                disabled={!selectedInstance?.userDir}
+                className="flex items-center gap-2 shrink-0"
+              >
+                <FolderOpen className="w-4 h-4" />
+                Open in Finder
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* AI Integration — OpenRouter API Key */}
         <Card className="bg-white shadow-md">

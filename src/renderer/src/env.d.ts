@@ -3,6 +3,9 @@
 declare const __APP_VERSION__: string
 
 interface Window {
+  fileAPI: {
+    openUserDir: (userDir: string) => Promise<boolean>
+  }
   aiAPI: {
     getConfig: () => Promise<{ openrouter_api_key?: string }>
     saveConfig: (config: { openrouter_api_key: string }) => Promise<string>

@@ -18,6 +18,12 @@ const streamAPI = {
     }),
 }
 
+// File utilities
+const fileAPI = {
+  openUserDir: (userDir: string): Promise<boolean> =>
+    ipcRenderer.invoke('open-user-dir', userDir),
+}
+
 // AI fix API
 const aiAPI = {
   getConfig: (): Promise<{ openrouter_api_key?: string }> =>
@@ -53,6 +59,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('api', streamAPI)
     contextBridge.exposeInMainWorld('electronAPI', updateAPI)
     contextBridge.exposeInMainWorld('aiAPI', aiAPI)
+    contextBridge.exposeInMainWorld('fileAPI', fileAPI)
   } catch (error) {
     console.error('Failed to expose APIs:', error)
   }
@@ -65,6 +72,8 @@ if (process.contextIsolated) {
   window.electronAPI = updateAPI
   // @ts-ignore
   window.aiAPI = aiAPI
+  // @ts-ignore
+  window.fileAPI = fileAPI
 }
 
 declare global {
@@ -73,5 +82,6 @@ declare global {
     api: typeof streamAPI
     electronAPI: typeof updateAPI
     aiAPI: typeof aiAPI
+    fileAPI: typeof fileAPI
   }
 }

@@ -1,4 +1,4 @@
-import { ipcMain, app } from 'electron'
+import { ipcMain, app, shell } from 'electron'
 import { readJsonFile, writeJsonFile } from '../services/fileService'
 import type { PATHS } from '../paths'
 import { existsSync, readdirSync, unlinkSync } from 'fs'
@@ -18,6 +18,14 @@ export function registerFileIpc(): void {
     if (existsSync(scriptsDir)) {
       readdirSync(scriptsDir).forEach((f) => unlinkSync(path.join(scriptsDir, f)))
     }
+    return true
+  })
+
+  // Only allow opening paths inside userData to prevent arbitrary filesystem access
+  ipcMain.handle('open-user-dir', async (_, userDir: string) => {
+    const userData = app.getPath('userData')
+    if (!userDir.startsWith(userData)) return false
+    await shell.openPath(userDir)
     return true
   })
 }
