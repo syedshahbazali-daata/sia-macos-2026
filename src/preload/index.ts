@@ -18,6 +18,18 @@ const streamAPI = {
     }),
 }
 
+// AI fix API
+const aiAPI = {
+  getConfig: (): Promise<{ openrouter_api_key?: string }> =>
+    ipcRenderer.invoke('get-ai-config'),
+  saveConfig: (config: { openrouter_api_key: string }): Promise<string> =>
+    ipcRenderer.invoke('save-ai-config', config),
+  onFixStatus: (cb: (data: Record<string, unknown>) => void) =>
+    ipcRenderer.on('ai-fix-status', (_event, data) => cb(data)),
+  offFixStatus: (cb: (data: Record<string, unknown>) => void) =>
+    ipcRenderer.removeListener('ai-fix-status', (_event, data) => cb(data)),
+}
+
 // Auto-updater events
 const updateAPI = {
   checkForUpdates: () => ipcRenderer.send('manual-update-check'),
@@ -40,6 +52,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', streamAPI)
     contextBridge.exposeInMainWorld('electronAPI', updateAPI)
+    contextBridge.exposeInMainWorld('aiAPI', aiAPI)
   } catch (error) {
     console.error('Failed to expose APIs:', error)
   }
@@ -50,6 +63,8 @@ if (process.contextIsolated) {
   window.api = streamAPI
   // @ts-ignore
   window.electronAPI = updateAPI
+  // @ts-ignore
+  window.aiAPI = aiAPI
 }
 
 declare global {
@@ -57,5 +72,6 @@ declare global {
     electron: typeof electronAPI
     api: typeof streamAPI
     electronAPI: typeof updateAPI
+    aiAPI: typeof aiAPI
   }
 }

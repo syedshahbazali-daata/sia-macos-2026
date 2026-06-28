@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { TabsContent } from '@renderer/components/ui/tabs'
-import { Clock, CreditCard, Shield, User, RefreshCw, Loader2 } from 'lucide-react'
+import { Clock, CreditCard, Shield, User, RefreshCw, Loader2, Bot, Eye, EyeOff } from 'lucide-react'
 import { Card, CardContent } from '@renderer/components/ui/card'
 import { Button } from '@renderer/components/ui/button'
+import { Input } from '@renderer/components/ui/input'
 import { useSelector } from 'react-redux'
 import { getSelectedInstance } from '@renderer/redux/slices/SelectedInstanceSlice'
 import { usePlan } from '@renderer/hooks/usePlan'
@@ -29,6 +30,17 @@ const MyProfile = (): JSX.Element => {
   const [showChange, setShowChange] = useState(false)
   const [newCode, setNewCode] = useState('')
   const [isChanging, setIsChanging] = useState(false)
+
+  const [apiKey, setApiKey] = useState('')
+  const [showKey, setShowKey] = useState(false)
+  const [isSavingKey, setIsSavingKey] = useState(false)
+  const [keySaved, setKeySaved] = useState(false)
+
+  useEffect(() => {
+    window.aiAPI.getConfig().then((cfg) => {
+      if (cfg.openrouter_api_key) setApiKey(cfg.openrouter_api_key)
+    })
+  }, [])
 
   const planMeta = PLAN_LABELS[plan] ?? PLAN_LABELS.free
 
@@ -92,6 +104,24 @@ const MyProfile = (): JSX.Element => {
       toast({ title: 'Error', description: 'Could not reach the license server.', variant: 'destructive' })
     } finally {
       setIsChanging(false)
+    }
+  }
+
+  const handleSaveApiKey = async (): Promise<void> => {
+    if (!apiKey.trim()) {
+      toast({ title: 'Empty Key', description: 'Please enter your OpenRouter API key.', variant: 'destructive' })
+      return
+    }
+    setIsSavingKey(true)
+    try {
+      await window.aiAPI.saveConfig({ openrouter_api_key: apiKey.trim() })
+      setKeySaved(true)
+      toast({ title: 'API Key Saved', description: 'OpenRouter key stored. AI bot fixing is now active.' })
+      setTimeout(() => setKeySaved(false), 3000)
+    } catch {
+      toast({ title: 'Error', description: 'Could not save API key.', variant: 'destructive' })
+    } finally {
+      setIsSavingKey(false)
     }
   }
 
@@ -193,6 +223,61 @@ const MyProfile = (): JSX.Element => {
             </CardContent>
           </Card>
         </div>
+
+        {/* AI Integration — OpenRouter API Key */}
+        <Card className="bg-white shadow-md">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
+                <Bot className="w-4 h-4 text-indigo-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 font-poppins">AI Bot Auto-Fix</h3>
+                <p className="text-sm text-gray-500 font-poppins">
+                  When a bot breaks, AI automatically detects and fixes it using OpenRouter
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Input
+                  type={showKey ? 'text' : 'password'}
+                  placeholder="sk-or-v1-…"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  className="pr-10 font-mono text-sm bg-white border-gray-300"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowKey((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <Button
+                onClick={handleSaveApiKey}
+                disabled={isSavingKey}
+                className={keySaved ? 'bg-green-600 hover:bg-green-700' : ''}
+              >
+                {isSavingKey ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : keySaved ? (
+                  'Saved ✓'
+                ) : (
+                  'Save Key'
+                )}
+              </Button>
+            </div>
+
+            <p className="text-xs text-gray-400 font-poppins mt-2">
+              Get your key at{' '}
+              <span className="text-indigo-500 font-medium">openrouter.ai/keys</span>.
+              The key is stored locally and never leaves your device.
+            </p>
+          </CardContent>
+        </Card>
 
         {/* Change License Section */}
         <Card className="bg-white shadow-md">

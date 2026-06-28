@@ -5,6 +5,7 @@ import { join } from 'path'
 // Keys here double as the string argument to read-json-file / write-json-file IPC calls.
 export const PATHS = {
   JSON_FILE: join(app.getPath('userData'), 'schedulers.json'),
+  AI_CONFIG: join(app.getPath('userData'), 'ai-config.json'),
   STREAM_KEYS: join(app.getPath('userData'), 'stream-keys.json'),
   SIGNATURES: join(app.getPath('userData'), 'signatures.json'),
   ATTACHED_ACCOUNTS: join(app.getPath('userData'), 'attached-accounts.json'),

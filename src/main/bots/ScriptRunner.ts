@@ -4,6 +4,17 @@ import path from 'path'
 import { app } from 'electron'
 import type { Page } from 'patchright'
 import type { Scheduler } from '../types'
+import {
+  readAiConfig,
+  fetchAiModelConfig,
+  loadPlatformFixes,
+  savePlatformFixes,
+  getAiFix,
+  sendAiStatus,
+  type PlatformFixes,
+  type SelectorFix,
+  type InjectedStep,
+} from '../services/aiService'
 
 const PROJECT_ID = 'sia-testing-database'
 const API_KEY = 'AIzaSyC_Sp3J5envUXA28055Pny7RXUO93splJE'
@@ -59,17 +70,14 @@ function writeCache(platform: string, version: string, script: string): void {
 }
 
 async function fetchCloudScript(platform: string): Promise<string | null> {
-  // 1. Get version from manifest
   const manifest = await fetchFirestoreDoc('bot_scripts', 'manifest')
   if (!manifest) return null
   const version = manifest[platform]
   if (typeof version !== 'string') return null
 
-  // 2. Check local cache
   const cached = readCached(platform, version)
   if (cached) return cached
 
-  // 3. Download from Firestore script document
   const doc = await fetchFirestoreDoc('bot_scripts', `${platform}-${version}`)
   if (!doc || typeof doc.script !== 'string') return null
 
@@ -89,6 +97,18 @@ const PLATFORM_KEY: Record<string, string> = {
   'of mass messaging': 'of-mass-messaging',
 }
 
+// Friendly display name for AI status messages
+const PLATFORM_DISPLAY: Record<string, string> = {
+  'twitter-post': 'Twitter',
+  'tiktok-post': 'TikTok',
+  'instagram-post': 'Instagram',
+  'facebook-post': 'Facebook',
+  'of-post': 'OnlyFans',
+  'youtube-shorts': 'YouTube Shorts',
+  'instagram-story': 'Instagram Story',
+  'of-mass-messaging': 'OnlyFans Mass Messaging',
+}
+
 export async function runCloudScript(
   platform: string,
   page: Page,
@@ -102,30 +122,200 @@ export async function runCloudScript(
   const script = await fetchCloudScript(key)
   if (!script) return false
 
+  // Load AI fixes, model config, and local API key in parallel
+  const [fixes, aiModelCfg, aiCfg] = await Promise.all([
+    loadPlatformFixes(key),
+    fetchAiModelConfig(),
+    Promise.resolve(readAiConfig()),
+  ])
+
+  const platformFixes: PlatformFixes = fixes
+  const apiKey = aiCfg.openrouter_api_key
+  const displayName = PLATFORM_DISPLAY[key] ?? platform
+
+  // ── AI Fix Trigger ──────────────────────────────────────────────────────────
+  // Called when an action fails and we have an API key configured.
+  // Notifies the renderer, asks AI for a fix, saves it, then retries.
+  async function triggerAiFix(
+    failingSelector: string,
+    error: Error,
+    retryFn: (selector: string) => Promise<unknown>,
+  ): Promise<unknown> {
+    if (!apiKey) throw error
+
+    sendAiStatus({ status: 'fixing', selector: failingSelector, platform: displayName })
+
+    try {
+      const [pageHtml, screenshotBuf] = await Promise.all([
+        page.evaluate(() => document.body.innerHTML).catch(() => ''),
+        page.screenshot().catch(() => null),
+      ])
+
+      const screenshotBase64 = screenshotBuf ? Buffer.from(screenshotBuf).toString('base64') : null
+
+      const fix = await getAiFix({
+        selector: failingSelector,
+        errorMsg: error.message,
+        platform: displayName,
+        pageHtml: (pageHtml as string).slice(0, 50000),
+        screenshotBase64,
+        apiKey,
+        htmlModel: aiModelCfg.html_model,
+        visionModel: aiModelCfg.vision_model,
+      })
+
+      if (fix.type === 'none') {
+        sendAiStatus({ status: 'failed', selector: failingSelector, platform: displayName })
+        throw error
+      }
+
+      const date = new Date().toISOString().split('T')[0]
+      const model = aiModelCfg.html_model
+
+      // Apply selector fix
+      if (fix.selector_fix && (fix.type === 'selector_fix' || fix.type === 'both')) {
+        const newFix: SelectorFix = {
+          original: failingSelector,
+          replacement: fix.selector_fix.replacement,
+          added_by: 'ai',
+          model,
+          date,
+          note: fix.selector_fix.note,
+        }
+        // Replace any existing fix for this selector
+        platformFixes.selector_fixes = platformFixes.selector_fixes.filter(
+          (f) => f.original !== failingSelector,
+        )
+        platformFixes.selector_fixes.push(newFix)
+      }
+
+      // Apply injected steps
+      if (fix.new_steps && (fix.type === 'new_step' || fix.type === 'both')) {
+        for (const step of fix.new_steps) {
+          const newStep: InjectedStep = {
+            id: `ai-step-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            position: step.position,
+            code: step.code,
+            added_by: 'ai',
+            model,
+            date,
+            note: step.note,
+          }
+          platformFixes.injected_steps.push(newStep)
+        }
+      }
+
+      // Persist fixes to Firestore
+      await savePlatformFixes(key, platformFixes)
+
+      const replacement = fix.selector_fix?.replacement ?? failingSelector
+      sendAiStatus({ status: 'fixed', selector: failingSelector, replacement, platform: displayName })
+
+      return retryFn(replacement)
+    } catch (innerError) {
+      // Only re-throw the original error, not any error from the AI flow
+      if (innerError !== error) {
+        sendAiStatus({ status: 'failed', selector: failingSelector, platform: displayName })
+      }
+      throw error
+    }
+  }
+
+  // ── Selector race helper ────────────────────────────────────────────────────
+  // Tries original and AI-fix selector in parallel; returns the winner.
+  async function raceSelectors(
+    original: string,
+    replacement: string,
+    timeout: number,
+  ): Promise<string | null> {
+    return Promise.any([
+      page.waitForSelector(original, { timeout }).then(() => original),
+      page.waitForSelector(replacement, { timeout }).then(() => replacement),
+    ]).catch(() => null)
+  }
+
+  function findFix(selector: string): SelectorFix | undefined {
+    return platformFixes.selector_fixes.find((f) => f.original === selector)
+  }
+
+  // ── Enhanced sandbox ────────────────────────────────────────────────────────
   const sandbox = vm.createContext({
-    // Navigation
     goto: (url: string, opts?: { timeout?: number }) =>
       page.goto(url, { timeout: opts?.timeout ?? 60000 }),
 
-    // Clicking
-    click: (selector: string, opts?: { force?: boolean }) => page.click(selector, opts),
-    dispatchClick: (selector: string) =>
-      page.evaluate((sel: string) => {
+    click: async (selector: string, opts?: { force?: boolean }) => {
+      const aiFix = findFix(selector)
+      if (aiFix) {
+        const winner = await raceSelectors(selector, aiFix.replacement, 5000)
+        if (!winner) {
+          return triggerAiFix(selector, new Error(`Selector timed out: ${selector}`), (s) =>
+            page.click(s, opts),
+          )
+        }
+        return page.click(winner, opts)
+      }
+      try {
+        return await page.click(selector, opts)
+      } catch (e) {
+        return triggerAiFix(
+          selector,
+          e instanceof Error ? e : new Error(String(e)),
+          (s) => page.click(s, opts),
+        )
+      }
+    },
+
+    dispatchClick: async (selector: string) => {
+      const aiFix = findFix(selector)
+      const target = aiFix
+        ? (await raceSelectors(selector, aiFix.replacement, 5000)) ?? selector
+        : selector
+      return page.evaluate((sel: string) => {
         const el = document.querySelector(sel) as HTMLElement | null
         if (!el) throw new Error(`${sel} not found`)
         el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }))
-      }, selector),
+      }, target)
+    },
 
-    // Text input
-    fill: (selector: string, value: string) => page.fill(selector, value),
-    typeText: (selector: string, value: string, delay?: number) =>
-      page.type(selector, value, { delay: delay ?? 20 }),
+    fill: async (selector: string, value: string) => {
+      const aiFix = findFix(selector)
+      if (aiFix) {
+        const winner = await raceSelectors(selector, aiFix.replacement, 5000)
+        const target = winner ?? selector
+        return page.fill(target, value)
+      }
+      try {
+        return await page.fill(selector, value)
+      } catch (e) {
+        return triggerAiFix(
+          selector,
+          e instanceof Error ? e : new Error(String(e)),
+          (s) => page.fill(s, value),
+        )
+      }
+    },
 
-    // File upload via setInputFiles (for hidden file inputs — Twitter)
+    typeText: async (selector: string, value: string, delay?: number) => {
+      const aiFix = findFix(selector)
+      if (aiFix) {
+        const winner = await raceSelectors(selector, aiFix.replacement, 5000)
+        const target = winner ?? selector
+        return page.type(target, value, { delay: delay ?? 20 })
+      }
+      try {
+        return await page.type(selector, value, { delay: delay ?? 20 })
+      } catch (e) {
+        return triggerAiFix(
+          selector,
+          e instanceof Error ? e : new Error(String(e)),
+          (s) => page.type(s, value, { delay: delay ?? 20 }),
+        )
+      }
+    },
+
     upload: (selector: string, paths: string | string[]) =>
       page.setInputFiles(selector, Array.isArray(paths) ? paths : [paths]),
 
-    // File upload via OS file chooser dialog (YouTube Studio, TikTok etc.)
     chooseFiles: async (clickSelector: string, files: string | string[]) => {
       const [fileChooser] = await Promise.all([
         page.waitForEvent('filechooser'),
@@ -134,7 +324,6 @@ export async function runCloudScript(
       await fileChooser.setFiles(Array.isArray(files) ? files : [files])
     },
 
-    // File chooser with an optional intermediate click before the dialog opens (Meta Business Suite)
     chooseFilesViaIntermediate: async (
       primarySelector: string,
       intermediateSelector: string | null,
@@ -153,56 +342,74 @@ export async function runCloudScript(
       await fileChooser.setFiles(Array.isArray(files) ? files : [files])
     },
 
-    // Keyboard key press on a specific element
     press: (selector: string, key: string) => page.press(selector, key),
 
-    // Global keyboard press (no element target) — used by Meta story composer
     keyboardPress: (key: string) => page.keyboard.press(key),
 
-    // Make a DOM element visible (TikTok hides the file input)
     makeVisible: (selector: string) =>
       page.evaluate((sel: string) => {
         const el = document.querySelector(sel) as HTMLElement | null
         if (el) el.style.display = 'block'
       }, selector),
 
-    // Check if an element is visible
     isVisible: (selector: string) => page.locator(selector).isVisible(),
 
-    // Get inner text of an element
     getText: (selector: string) => page.locator(selector).innerText(),
 
-    // Click first XPath result via document.evaluate (bypasses Playwright selector engine)
     xpathClickFirst: (xpath: string) =>
       page.evaluate((xp: string) => {
         const el = document.evaluate(
-          xp, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null,
+          xp,
+          document,
+          null,
+          XPathResult.FIRST_ORDERED_NODE_TYPE,
+          null,
         ).singleNodeValue as HTMLElement | null
         if (el) el.click()
       }, xpath),
 
-    // Click every element matching a CSS selector
     clickAll: (selector: string) =>
       page.evaluate((sel: string) => {
         document.querySelectorAll(sel).forEach((el) => (el as HTMLElement).click())
       }, selector),
 
-    // Waiting
-    wait: (selector: string, timeout?: number) =>
-      page.waitForSelector(selector, { timeout: timeout ?? 30000 }),
+    wait: async (selector: string, timeout?: number) => {
+      const aiFix = findFix(selector)
+      const ms = timeout ?? 30000
+      if (aiFix) {
+        const winner = await raceSelectors(selector, aiFix.replacement, ms)
+        if (!winner) {
+          return triggerAiFix(selector, new Error(`Wait timed out: ${selector}`), (s) =>
+            page.waitForSelector(s, { timeout: ms }),
+          )
+        }
+        return winner
+      }
+      try {
+        return await page.waitForSelector(selector, { timeout: ms })
+      } catch (e) {
+        return triggerAiFix(
+          selector,
+          e instanceof Error ? e : new Error(String(e)),
+          (s) => page.waitForSelector(s, { timeout: ms }),
+        )
+      }
+    },
+
     waitXPath: (xpath: string, timeout?: number) =>
       page.waitForSelector(`xpath=${xpath}`, { timeout: timeout ?? 0 }),
+
     waitMs: (ms: number) => page.waitForTimeout(ms),
 
-    // DOM queries
     exists: async (selector: string) => (await page.locator(selector).count()) > 0,
+
     bodyText: () => page.evaluate(() => document.body.innerText.toLowerCase()),
+
     layersText: () =>
       page.evaluate(
         () => (document.getElementById('layers') as HTMLElement | null)?.innerText ?? '',
       ),
 
-    // Set <select> element value by ID (used for Twitter's schedule date picker)
     setSelectById: (id: string, value: string) =>
       page.evaluate(
         ([elId, val]: string[]) => {
@@ -214,7 +421,6 @@ export async function runCloudScript(
         [id, value],
       ),
 
-    // Find element by exact trimmed innerText and dispatch a click
     clickByText: (text: string) =>
       page.evaluate((txt: string) => {
         const el = Array.from(document.querySelectorAll('*')).find(
@@ -226,20 +432,39 @@ export async function runCloudScript(
         )
       }, text),
 
-    // Variables injected at runtime
     vars: { schedules, jsonFilePath },
-
-    // Callbacks
     done: (id: string) => moveToHistory(id, jsonFilePath),
     log: (...args: unknown[]) => console.log('[cloud-script]', ...args),
-
-    // Expose console so scripts can use console.log if needed
     console,
   })
 
+  // ── Run AI pre-injected steps (dismiss popups, handle banners, etc.) ────────
+  for (const step of platformFixes.injected_steps.filter((s) => s.position === 'pre')) {
+    try {
+      const fn = vm.runInContext(`(async () => { ${step.code} })()`, sandbox) as Promise<void>
+      await fn
+      console.log(`[ai-step] ran pre-step: ${step.id}`)
+    } catch {
+      // Pre-steps are optional — never block main script
+    }
+  }
+
+  // ── Run main cloud script ────────────────────────────────────────────────────
   const wrapped = `(async () => { ${script} })()`
   const vmScript = new vm.Script(wrapped)
   const result = vmScript.runInContext(sandbox) as Promise<void>
   await result
+
+  // ── Run AI post-injected steps ───────────────────────────────────────────────
+  for (const step of platformFixes.injected_steps.filter((s) => s.position === 'post')) {
+    try {
+      const fn = vm.runInContext(`(async () => { ${step.code} })()`, sandbox) as Promise<void>
+      await fn
+      console.log(`[ai-step] ran post-step: ${step.id}`)
+    } catch {
+      // Post-steps are optional
+    }
+  }
+
   return true
 }

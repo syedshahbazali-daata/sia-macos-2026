@@ -8,6 +8,7 @@ import { registerStreamIpc } from './ipc/streamIpc'
 import { registerSchedulerIpc } from './ipc/schedulerIpc'
 import { registerBrowserIpc } from './ipc/browserIpc'
 import { registerFileIpc } from './ipc/fileIpc'
+import { registerAiIpc } from './ipc/aiIpc'
 import { cleanupAllStreams } from './services/streamService'
 
 function setupAutoUpdater(win: BrowserWindow): void {
@@ -78,6 +79,7 @@ app.whenReady().then(() => {
   registerSchedulerIpc()
   registerBrowserIpc()
   registerFileIpc()
+  registerAiIpc()
 
   createWindow()
 })

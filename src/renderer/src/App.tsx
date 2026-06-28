@@ -26,6 +26,7 @@ import Faq from './workspace/pages/Faq/Faq'
 import { Toaster } from './components/ui/toaster'
 import SchedulerErrorModal, { SchedulerErrorData } from './workspace/pages/schedulers/components/SchedulerError/SchedulerErrorModal'
 import { UpdateBanner } from './components/UpdateBanner'
+import { AiFixingOverlay } from './components/AiFixingModal'
 
 const App: React.FC = () => {
   const [schedulerError, setSchedulerError] = useState<SchedulerErrorData | null>(null)
@@ -79,6 +80,7 @@ const App: React.FC = () => {
       <Router>
         <Toaster />
         <UpdateBanner />
+        <AiFixingOverlay />
         {schedulerError && (
           <SchedulerErrorModal
             error={schedulerError}
