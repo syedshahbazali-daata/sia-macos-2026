@@ -1,6 +1,6 @@
 {
   "name": "sia",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "SiA - Smart Intelligent Assistant",
   "main": "./out/main/index.js",
   "author": "example.com",
