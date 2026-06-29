@@ -11,6 +11,7 @@ import {
   savePlatformFixes,
   getAiFix,
   sendAiStatus,
+  updateCloudScript,
   type PlatformFixes,
   type SelectorFix,
   type InjectedStep,
@@ -69,20 +70,22 @@ function writeCache(platform: string, version: string, script: string): void {
   writeFileSync(file, script, 'utf-8')
 }
 
-async function fetchCloudScript(platform: string): Promise<string | null> {
+async function fetchCloudScript(
+  platform: string,
+): Promise<{ script: string; version: string } | null> {
   const manifest = await fetchFirestoreDoc('bot_scripts', 'manifest')
   if (!manifest) return null
   const version = manifest[platform]
   if (typeof version !== 'string') return null
 
   const cached = readCached(platform, version)
-  if (cached) return cached
+  if (cached) return { script: cached, version }
 
   const doc = await fetchFirestoreDoc('bot_scripts', `${platform}-${version}`)
   if (!doc || typeof doc.script !== 'string') return null
 
   writeCache(platform, version, doc.script)
-  return doc.script
+  return { script: doc.script, version }
 }
 
 // Maps RunScheduler platform keys to Firestore document keys
@@ -119,8 +122,11 @@ export async function runCloudScript(
   const key = PLATFORM_KEY[platform.toLowerCase()]
   if (!key) return false
 
-  const script = await fetchCloudScript(key)
-  if (!script) return false
+  const scriptResult = await fetchCloudScript(key)
+  if (!scriptResult) return false
+
+  let currentScript = scriptResult.script
+  const scriptVersion = scriptResult.version
 
   // Load AI fixes, model config, and local API key in parallel
   const [fixes, aiModelCfg, aiCfg] = await Promise.all([
@@ -162,6 +168,7 @@ export async function runCloudScript(
         apiKey,
         htmlModel: aiModelCfg.html_model,
         visionModel: aiModelCfg.vision_model,
+        scriptCode: currentScript,
       })
 
       if (fix.type === 'none') {
@@ -172,8 +179,21 @@ export async function runCloudScript(
       const date = new Date().toISOString().split('T')[0]
       const model = aiModelCfg.html_model
 
-      // Apply selector fix
-      if (fix.selector_fix && (fix.type === 'selector_fix' || fix.type === 'both')) {
+      // Apply script_fix — patch the cloud script permanently
+      if (fix.script_fix?.find && fix.script_fix?.replace) {
+        if (currentScript.includes(fix.script_fix.find)) {
+          const patched = currentScript.replaceAll(fix.script_fix.find, fix.script_fix.replace)
+          currentScript = patched
+          writeCache(key, scriptVersion, patched)
+          await updateCloudScript(key, scriptVersion, patched)
+          console.log(`[ai-script-fix] Patched script "${fix.script_fix.find}" → "${fix.script_fix.replace}"`)
+        } else {
+          console.warn('[ai-script-fix] find string not found in script, skipping script patch')
+        }
+      }
+
+      // Apply selector_fix — only saved when the selector is static (not from a script_fix run)
+      if (fix.selector_fix && fix.type === 'selector_fix') {
         const newFix: SelectorFix = {
           original: failingSelector,
           replacement: fix.selector_fix.replacement,
@@ -182,7 +202,6 @@ export async function runCloudScript(
           date,
           note: fix.selector_fix.note,
         }
-        // Replace any existing fix for this selector
         platformFixes.selector_fixes = platformFixes.selector_fixes.filter(
           (f) => f.original !== failingSelector,
         )
@@ -190,7 +209,7 @@ export async function runCloudScript(
       }
 
       // Apply injected steps
-      if (fix.new_steps && (fix.type === 'new_step' || fix.type === 'both')) {
+      if (fix.new_steps) {
         for (const step of fix.new_steps) {
           const newStep: InjectedStep = {
             id: `ai-step-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -205,11 +224,17 @@ export async function runCloudScript(
         }
       }
 
-      // Persist fixes to Firestore
+      // Persist platform fixes to Firestore
       await savePlatformFixes(key, platformFixes)
 
       const replacement = fix.selector_fix?.replacement ?? failingSelector
-      sendAiStatus({ status: 'fixed', selector: failingSelector, replacement, platform: displayName })
+      sendAiStatus({
+        status: 'fixed',
+        selector: failingSelector,
+        replacement,
+        platform: displayName,
+        scriptPatched: !!fix.script_fix,
+      })
 
       return retryFn(replacement)
     } catch (innerError) {
@@ -472,7 +497,7 @@ export async function runCloudScript(
   }
 
   // ── Run main cloud script ────────────────────────────────────────────────────
-  const wrapped = `(async () => { ${script} })()`
+  const wrapped = `(async () => { ${currentScript} })()`
   const vmScript = new vm.Script(wrapped)
   const result = vmScript.runInContext(sandbox) as Promise<void>
   await result

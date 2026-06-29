@@ -39,9 +39,16 @@ export interface PlatformFixes {
   injected_steps: InjectedStep[]
 }
 
+export interface ScriptFix {
+  find: string
+  replace: string
+  note: string
+}
+
 export interface AiFixResult {
-  type: 'selector_fix' | 'new_step' | 'both' | 'none'
+  type: 'selector_fix' | 'script_fix' | 'new_step' | 'none'
   selector_fix?: { replacement: string; note: string }
+  script_fix?: ScriptFix
   new_steps?: Array<{ position: 'pre' | 'post'; code: string; note: string }>
 }
 
@@ -183,7 +190,7 @@ ${pageHtml}
 
 Analyze the HTML and return ONLY valid JSON with no explanation and no markdown code fences:
 {
-  "type": "selector_fix" | "new_step" | "both" | "none",
+  "type": "selector_fix" | "new_step" | "none",
   "selector_fix": {
     "replacement": "new-selector-here",
     "note": "brief reason"
@@ -205,6 +212,34 @@ Rules:
 - Return {"type":"none"} if you cannot determine a fix`
 }
 
+function buildScriptAnalysisPrompt(original: string, replacement: string, scriptCode: string): string {
+  return `A Playwright automation script used selector: "${original}"
+It failed. An AI found this fix for the current run: "${replacement}"
+
+Here is the cloud script that generates that selector:
+\`\`\`
+${scriptCode.slice(0, 12000)}
+\`\`\`
+
+If the selector value is dynamically generated in the script from a variable (e.g., the hour or minute
+formatted without padding, like String(h) producing "6" but the page shows "06"),
+return a script_fix that patches the root cause so ALL future dynamic values are correct.
+
+Return ONLY valid JSON, no explanation, no markdown:
+{
+  "type": "script_fix" | "none",
+  "script_fix": {
+    "find": "exact line from the script above to replace",
+    "replace": "corrected replacement line",
+    "note": "brief reason"
+  }
+}
+
+Rules:
+- script_fix.find must EXACTLY match a line in the script
+- Return {"type":"none"} if the selector is static (not from a variable)`
+}
+
 function buildVisionPrompt(selector: string, errorMsg: string, platform: string): string {
   return `You are fixing a broken Playwright browser automation script for the ${platform} platform.
 
@@ -215,7 +250,7 @@ ${SANDBOX_DOCS}
 
 Look at the screenshot and return ONLY valid JSON with no explanation and no markdown code fences:
 {
-  "type": "selector_fix" | "new_step" | "both" | "none",
+  "type": "selector_fix" | "new_step" | "none",
   "selector_fix": {
     "replacement": "new-selector-here",
     "note": "brief reason"
@@ -270,10 +305,28 @@ function parseAiResponse(raw: string | null): AiFixResult {
   try {
     const cleaned = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
     const parsed = JSON.parse(cleaned) as AiFixResult
-    if (!['selector_fix', 'new_step', 'both', 'none'].includes(parsed.type)) return { type: 'none' }
+    if (!['selector_fix', 'script_fix', 'new_step', 'none'].includes(parsed.type)) return { type: 'none' }
     return parsed
   } catch {
     return { type: 'none' }
+  }
+}
+
+export async function updateCloudScript(
+  platformKey: string,
+  version: string,
+  patchedScript: string,
+): Promise<boolean> {
+  try {
+    const url = `${FIRESTORE_BASE}/bot_scripts/${platformKey}-${version}?updateMask.fieldPaths=script&key=${FIRESTORE_KEY}`
+    const res = await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: { script: { stringValue: patchedScript } } }),
+    })
+    return res.ok
+  } catch {
+    return false
   }
 }
 
@@ -286,22 +339,23 @@ export async function getAiFix(params: {
   apiKey: string
   htmlModel: string
   visionModel: string
+  scriptCode?: string
 }): Promise<AiFixResult> {
-  const { selector, errorMsg, platform, pageHtml, screenshotBase64, apiKey, htmlModel, visionModel } = params
+  const { selector, errorMsg, platform, pageHtml, screenshotBase64, apiKey, htmlModel, visionModel, scriptCode } =
+    params
 
-  // Try HTML fix first (cheaper, no vision model needed)
-  const htmlResult = parseAiResponse(
+  // Stage 1 — HTML model detects the correct selector from the page
+  let selectorResult = parseAiResponse(
     await callOpenRouter(
       [{ role: 'user', content: buildHtmlPrompt(selector, errorMsg, platform, pageHtml) }],
       htmlModel,
       apiKey,
     ),
   )
-  if (htmlResult.type !== 'none') return htmlResult
 
-  // Fallback to screenshot + vision model
-  if (screenshotBase64) {
-    const visionResult = parseAiResponse(
+  // Stage 1 fallback — vision model if HTML model returned nothing
+  if (selectorResult.type === 'none' && screenshotBase64) {
+    selectorResult = parseAiResponse(
       await callOpenRouter(
         [
           {
@@ -316,10 +370,106 @@ export async function getAiFix(params: {
         apiKey,
       ),
     )
-    if (visionResult.type !== 'none') return visionResult
   }
 
-  return { type: 'none' }
+  if (selectorResult.type === 'none') return { type: 'none' }
+
+  // Stage 2 — check if the selector fix is for a dynamically-generated value.
+  // Try AI analysis first, then fall back to deterministic pattern detection.
+  if (selectorResult.selector_fix && scriptCode) {
+    // Try AI script analysis
+    const scriptAnalysis = parseAiResponse(
+      await callOpenRouter(
+        [
+          {
+            role: 'user',
+            content: buildScriptAnalysisPrompt(selector, selectorResult.selector_fix.replacement, scriptCode),
+          },
+        ],
+        htmlModel,
+        apiKey,
+      ),
+    )
+
+    if (scriptAnalysis.type === 'script_fix' && scriptAnalysis.script_fix) {
+      return {
+        type: 'script_fix',
+        selector_fix: selectorResult.selector_fix,
+        script_fix: scriptAnalysis.script_fix,
+        new_steps: selectorResult.new_steps,
+      }
+    }
+
+    // Fallback: deterministic detection for numeric padding issues
+    // (e.g. [text()="6"] → [text()="06"] means the script generates unpadded numbers)
+    const autoScriptFix = detectPaddingScriptFix(selector, selectorResult.selector_fix.replacement, scriptCode)
+    if (autoScriptFix) {
+      console.log('[ai] deterministic padding fix detected:', autoScriptFix.find)
+      return {
+        type: 'script_fix',
+        selector_fix: selectorResult.selector_fix,
+        script_fix: autoScriptFix,
+        new_steps: selectorResult.new_steps,
+      }
+    }
+  }
+
+  return selectorResult
+}
+
+// Detects cases where a selector has [text()="N"] and the fix is [text()="0N"] (leading zero).
+// Finds and patches the script line that generates the unpadded value.
+function detectPaddingScriptFix(
+  original: string,
+  replacement: string,
+  scriptCode: string,
+): ScriptFix | null {
+  const origMatch = original.match(/\[text\(\)=["'](\d+)["']\]/)
+  const replMatch = replacement.match(/\[text\(\)=["'](\d+)["']\]/)
+  if (!origMatch || !replMatch) return null
+
+  const origNum = origMatch[1]
+  const replNum = replMatch[1]
+  // Must differ only by a leading zero
+  if (replNum.replace(/^0+/, '') !== origNum || replNum.length <= origNum.length) return null
+
+  // Patterns that generate unpadded numbers and their padStart replacements
+  const patchPatterns: Array<{ find: RegExp; replace: (s: string) => string; note: string }> = [
+    {
+      find: /h\s*===\s*0\s*\?\s*'00'\s*:\s*String\(h\)/,
+      replace: (s) => s.replace(/h\s*===\s*0\s*\?\s*'00'\s*:\s*String\(h\)/, "String(h).padStart(2, '0')"),
+      note: "TikTok time picker shows hours with leading zeros — use padStart(2,'0')",
+    },
+    {
+      find: /m\s*===\s*0\s*\?\s*'00'\s*:\s*String\(m\)/,
+      replace: (s) => s.replace(/m\s*===\s*0\s*\?\s*'00'\s*:\s*String\(m\)/, "String(m).padStart(2, '0')"),
+      note: "TikTok time picker shows minutes with leading zeros — use padStart(2,'0')",
+    },
+    {
+      find: /String\(h\)(?!\.padStart)/,
+      replace: (s) => s.replace(/String\(h\)(?!\.padStart)/, "String(h).padStart(2, '0')"),
+      note: "Time picker requires zero-padded hours",
+    },
+    {
+      find: /String\(m\)(?!\.padStart)/,
+      replace: (s) => s.replace(/String\(m\)(?!\.padStart)/, "String(m).padStart(2, '0')"),
+      note: "Time picker requires zero-padded minutes",
+    },
+  ]
+
+  for (const line of scriptCode.split('\n')) {
+    const trimmed = line.trim()
+    for (const p of patchPatterns) {
+      if (p.find.test(trimmed)) {
+        const fixed = p.replace(trimmed)
+        if (fixed !== trimmed) {
+          return { find: trimmed, replace: fixed, note: p.note }
+        }
+      }
+    }
+  }
+
+  return null
 }
 
 // ─── IPC Status ───────────────────────────────────────────────────────────────
