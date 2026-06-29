@@ -23,6 +23,12 @@ const fileAPI = {
   getUserDataPath: (): Promise<string> => ipcRenderer.invoke('get-user-data-path'),
   openUserDir: (userDir: string): Promise<boolean> =>
     ipcRenderer.invoke('open-user-dir', userDir),
+  getBotScripts: (): Promise<
+    Array<{ key: string; name: string; latestVersion: string; cachedVersion: string | null }>
+  > => ipcRenderer.invoke('get-bot-scripts'),
+  updateBotScripts: (): Promise<
+    Array<{ key: string; name: string; latestVersion: string; cachedVersion: string | null }>
+  > => ipcRenderer.invoke('update-bot-scripts'),
 }
 
 // AI fix API

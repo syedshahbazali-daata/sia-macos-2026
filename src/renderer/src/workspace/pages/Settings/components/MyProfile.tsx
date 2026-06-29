@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { TabsContent } from '@renderer/components/ui/tabs'
-import { Clock, CreditCard, Shield, User, RefreshCw, Loader2, Bot, Eye, EyeOff, Copy, Check } from 'lucide-react'
+import { Clock, CreditCard, Shield, User, RefreshCw, Loader2, Bot, Eye, EyeOff, Copy, Check, ScrollText } from 'lucide-react'
 import { Card, CardContent } from '@renderer/components/ui/card'
 import { Button } from '@renderer/components/ui/button'
 import { Input } from '@renderer/components/ui/input'
@@ -38,12 +38,33 @@ const MyProfile = (): JSX.Element => {
   const [isSavingKey, setIsSavingKey] = useState(false)
   const [keySaved, setKeySaved] = useState(false)
 
+  const [botScripts, setBotScripts] = useState<BotScriptInfo[]>([])
+  const [isLoadingScripts, setIsLoadingScripts] = useState(true)
+  const [isUpdatingScripts, setIsUpdatingScripts] = useState(false)
+
   useEffect(() => {
     window.fileAPI.getUserDataPath().then(setUserDataPath)
     window.aiAPI.getConfig().then((cfg) => {
       if (cfg.openrouter_api_key) setApiKey(cfg.openrouter_api_key)
     })
+    window.fileAPI.getBotScripts().then((scripts) => {
+      setBotScripts(scripts)
+      setIsLoadingScripts(false)
+    })
   }, [])
+
+  const handleUpdateScripts = async (): Promise<void> => {
+    setIsUpdatingScripts(true)
+    try {
+      const updated = await window.fileAPI.updateBotScripts()
+      setBotScripts(updated)
+      toast({ title: 'Scripts Updated', description: 'All bot scripts downloaded to latest versions.' })
+    } catch {
+      toast({ title: 'Update Failed', description: 'Could not reach the script server.', variant: 'destructive' })
+    } finally {
+      setIsUpdatingScripts(false)
+    }
+  }
 
   const planMeta = PLAN_LABELS[plan] ?? PLAN_LABELS.free
 
@@ -262,6 +283,72 @@ const MyProfile = (): JSX.Element => {
                 ? `${userDataPath}/${selectedInstance.userDir}`
                 : '—'}
             </p>
+          </CardContent>
+        </Card>
+
+        {/* Bot Scripts */}
+        <Card className="bg-white shadow-md">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center shrink-0">
+                  <ScrollText className="w-4 h-4 text-violet-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 font-poppins">Bot Scripts</h3>
+                  <p className="text-sm text-gray-500 font-poppins">
+                    Cloud automation scripts and their cached versions
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleUpdateScripts}
+                disabled={isUpdatingScripts || isLoadingScripts}
+                className="flex items-center gap-2 text-gray-700 border-gray-300 hover:text-gray-900 hover:bg-gray-100 shrink-0 ml-4"
+              >
+                {isUpdatingScripts ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
+                {isUpdatingScripts ? 'Updating…' : 'Update All'}
+              </Button>
+            </div>
+
+            {isLoadingScripts ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {botScripts.map((s) => {
+                  const isCurrent = s.cachedVersion === s.latestVersion
+                  return (
+                    <div key={s.key} className="flex items-center justify-between py-2.5">
+                      <span className="text-sm text-gray-700 font-poppins">{s.name}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                          {s.latestVersion}
+                        </span>
+                        {s.cachedVersion === null ? (
+                          <span className="text-xs text-amber-600 font-poppins">Not cached</span>
+                        ) : isCurrent ? (
+                          <span className="text-xs text-green-600 font-poppins flex items-center gap-1">
+                            <Check className="w-3 h-3" /> Up to date
+                          </span>
+                        ) : (
+                          <span className="text-xs text-red-500 font-poppins">
+                            Cached {s.cachedVersion}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 
