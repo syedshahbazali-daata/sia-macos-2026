@@ -3,7 +3,7 @@ import { join } from 'path'
 import { readSchedulers, writeSchedulers } from '../services/fileService'
 import { findBrowserPath } from '../services/browserService'
 import { PATHS } from '../paths'
-import runScheduler from '../bots/RunScheduler'
+import runScheduler, { runAllSchedulers } from '../bots/RunScheduler'
 import type { Scheduler } from '../types'
 
 export function registerSchedulerIpc(): void {
@@ -43,6 +43,19 @@ export function registerSchedulerIpc(): void {
       const userDir = join(app.getPath('userData'), userDirId)
       const browserExecPath = join(findBrowserPath()!, 'Contents', 'MacOS', 'Chromium')
       await runScheduler(platform, schedulers, browserExecPath, userDir, PATHS.JSON_FILE)
+      return 'success'
+    },
+  )
+
+  ipcMain.handle(
+    'run-all-schedulers',
+    async (
+      _,
+      platformGroups: { platform: string; schedulers: Scheduler[] }[],
+      userDirId: string,
+    ): Promise<string> => {
+      const userDir = join(app.getPath('userData'), userDirId)
+      await runAllSchedulers(platformGroups, userDir, PATHS.JSON_FILE)
       return 'success'
     },
   )

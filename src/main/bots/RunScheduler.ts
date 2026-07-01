@@ -68,6 +68,55 @@ const PLATFORM_MAP: Record<string, SchedulerHandler> = {
   'of mass messaging': OnlyFansMassMessageScheduler,
 }
 
+export async function runAllSchedulers(
+  platformGroups: { platform: string; schedulers: Scheduler[] }[],
+  userDir: string,
+  jsonFilePath: string,
+): Promise<void> {
+  process.env.HOME = userDir
+
+  const browserContext = await chromium.launchPersistentContext(userDir, {
+    channel: 'chrome',
+    headless: false,
+    viewport: null,
+  })
+
+  try {
+    for (const { platform, schedulers } of platformGroups) {
+      if (!schedulers.length) continue
+      const handler = PLATFORM_MAP[platform.toLowerCase()]
+      if (!handler) continue
+
+      const page = await browserContext.newPage()
+      try {
+        const ranCloud = await runCloudScript(
+          platform, page, schedulers, jsonFilePath, moveSchedulerToHistory,
+        )
+        if (!ranCloud) {
+          await handler(page, schedulers, jsonFilePath, moveSchedulerToHistory)
+        }
+      } catch (error) {
+        let screenshotBase64 = ''
+        try {
+          const buf = await page.screenshot()
+          screenshotBase64 = (buf as Buffer).toString('base64')
+        } catch { /* ignore */ }
+        const errorData: SchedulerErrorData = {
+          platform,
+          errorMessage: error instanceof Error ? error.message : String(error),
+          screenshotBase64,
+          timestamp: Date.now(),
+        }
+        BrowserWindow.getAllWindows()[0]?.webContents.send('scheduler-error', errorData)
+      } finally {
+        await page.close()
+      }
+    }
+  } finally {
+    await browserContext.close()
+  }
+}
+
 async function runScheduler(
   platform: string,
   schedules: Scheduler[],

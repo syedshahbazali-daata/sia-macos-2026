@@ -105,6 +105,7 @@ function computeMetrics(schedules: SchedulerRecord[]): MetricsData {
   const platformCounts: Record<string, number> = {}
   schedules.forEach((s) => {
     const key = (s.platform || '').toLowerCase()
+    if (key === 'all') return
     platformCounts[key] = (platformCounts[key] || 0) + 1
   })
   const topKey = Object.entries(platformCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? ''
@@ -126,6 +127,7 @@ function buildPlatformStats(schedules: SchedulerRecord[]): PlatformStat[] {
   const counts: Record<string, number> = {}
   schedules.forEach((s) => {
     const key = (s.platform || '').toLowerCase()
+    if (key === 'all') return
     counts[key] = (counts[key] || 0) + 1
   })
   return Object.entries(counts)

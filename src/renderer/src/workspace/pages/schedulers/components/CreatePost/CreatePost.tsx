@@ -21,6 +21,9 @@ import tiktok from '@renderer/assets/tiktok-icon.png'
 // import twitch from '@renderer/assets/twitch-icon.png'
 import OF from '@renderer/assets/of-icon.png'
 import youtube from '@renderer/assets/youtube-icon.png'
+import { LayoutGrid } from 'lucide-react'
+
+export const ALL_PLATFORMS_VALUE = 'all'
 
 
 const CreatePost = (): JSX.Element => {
@@ -46,6 +49,12 @@ const CreatePost = (): JSX.Element => {
             <SelectValue placeholder="SELECT PLATFORM" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value={ALL_PLATFORMS_VALUE}>
+              <span className="flex items-center gap-2">
+                <LayoutGrid className="w-4 h-4 text-gray-600" />
+                All Platforms
+              </span>
+            </SelectItem>
             <SelectItem value={SocialMediaPlatform.TwitterPost}>
               <span className="flex items-center gap-2">
                 <img src={twitter} alt="Twitter" className="w-4 h-4 object-contain" />
@@ -98,7 +107,11 @@ const CreatePost = (): JSX.Element => {
         </Select>
       </div>
       <hr className="w-full h-0.3 bg-black opacity-40 -mt-4" />
-      <div className="flex justify-between w-full h-full gap-5">
+      <div
+        className={`flex justify-between w-full h-full gap-5 transition-opacity duration-200 ${
+          scheduler.platform === ALL_PLATFORMS_VALUE ? 'opacity-40 pointer-events-none select-none' : ''
+        }`}
+      >
         <DescriptionSection />
         <div className="w-0.5 h-4/5 bg-black opacity-40 self-center" />
         {/* @ts-ignore props for schedulers and set schedulers that are coming from parent*/}

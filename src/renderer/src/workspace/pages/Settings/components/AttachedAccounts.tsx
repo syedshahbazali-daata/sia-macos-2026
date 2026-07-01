@@ -44,10 +44,12 @@ const AttachedAccounts = () => {
   const [browserLoading, setBrowserLoading] = useState(false)
 
   useEffect(() => {
-    window.electron.ipcRenderer.send('show-attached-accounts')
-    window.electron.ipcRenderer.on('attached-accounts', (_event, accounts) => {
+    const handler = (_event: unknown, accounts: Record<string, string[]>[]) => {
       setAttachedAccountsData(accounts)
-    })
+    }
+    window.electron.ipcRenderer.send('show-attached-accounts')
+    const removeListener = window.electron.ipcRenderer.on('attached-accounts', handler)
+    return removeListener
   }, [])
 
   const instanceDetails = getInstanceDetails()

@@ -22,15 +22,9 @@ const Schedulers = (): JSX.Element => {
       readSchedulesData()
     }
 
-    // Listen for scheduler history updates
-    window.electron.ipcRenderer.on('scheduler-history-updated', () => {
-      readSchedulesData()
-    })
+    const removeListener = window.electron.ipcRenderer.on('scheduler-history-updated', readSchedulesData)
 
-    // Cleanup listener on component unmount
-    return () => {
-      window.electron.ipcRenderer.removeListener('scheduler-history-updated', readSchedulesData)
-    }
+    return removeListener
   }, [])
 
   return (
